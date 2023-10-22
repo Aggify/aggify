@@ -43,12 +43,12 @@ pip install aggify
 Here's a code snippet that demonstrates how to use Aggify to construct a MongoDB aggregation pipeline:
 
 ```python
-from aggify import MongoOrm, Q
+from aggify import Aggify, Q
 from models import PostDocument
 from pprint import pprint
 
-# Create a MongoOrm instance with the base model (e.g., PostDocument)
-query = MongoOrm(PostDocument)
+# Create a Aggify instance with the base model (e.g., PostDocument)
+query = Aggify(PostDocument)
 
 # Define a complex query with filters and projections
 query.filter(

@@ -1,8 +1,8 @@
-class MongoOrm:
+class Aggify:
 
     def __init__(self, base_model):
         """
-        Initializes the MongoOrm class.
+        Initializes the Aggify class.
 
         Args:
             base_model: The base model class.
@@ -217,7 +217,7 @@ class MongoOrm:
 
 class Q:
     def __init__(self, **conditions):
-        self.conditions = MongoOrm.match(conditions.items()).get('$match')
+        self.conditions = Aggify.match(conditions.items()).get('$match')
 
     def to_dict(self):
         return {"$match": self.conditions}
