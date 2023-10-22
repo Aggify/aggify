@@ -28,7 +28,7 @@ Aggify is a Python library for generating MongoDB aggregation pipelines, designe
 - [ ] `$out`: Writes the result of the aggregation pipeline to a new collection.
 
 - [x] Q function : object is primarily used for complex queries that require logical operations
-- [ ] F function : object represents the value of a model field, its transformed value, or an annotated column
+- [x] F function : object represents the value of a model field, its transformed value, or an annotated column
 
 ## Installation
 
