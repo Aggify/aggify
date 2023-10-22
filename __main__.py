@@ -33,10 +33,10 @@ class Aggify:
 
         return self
 
-    def filter(self, q_filter=None, **kwargs):
-        if q_filter:
-            if isinstance(q_filter, Q):
-                self.pipelines.append(q_filter.to_dict())
+    def filter(self, arg=None, **kwargs):
+        if arg:
+            if isinstance(arg, Q):
+                self.pipelines.append(arg.to_dict())
             else:
                 raise ValueError(f"Invalid Q object")
         else:
@@ -65,18 +65,28 @@ class Aggify:
             'istartswith': '$regex',
             'endswith': '$regex',
             'iendswith': '$regex',
-            'lt': '$lt',
-            'lte': '$lte',
-            'gt': '$gt',
-            'gte': '$gte',
             'in': "$in",
             'ne': "$ne",
             'not': "$not",
         }
 
+        mongo_comparison_operators = {
+            'lt': '$lt',
+            'lte': '$lte',
+            'gt': '$gt',
+            'gte': '$gte',
+        }
+
+        mongo_operators |= mongo_comparison_operators
+
         match_query = {}
         for match in matches:
             key, value = match
+            if isinstance(value, F):
+                if '__' not in key:
+                    raise ValueError("You should use comparison operators with F function")
+                if (operator := key.rsplit("__", 1)[1]) not in list(mongo_comparison_operators.keys()):
+                    raise ValueError(f"Invalid operator: {operator}")
             if '__' not in key:
                 match_query[key] = value
                 continue
@@ -89,6 +99,11 @@ class Aggify:
                 match_query[field] = {mongo_operators[operator]: value}
             elif operator in ['contains', 'startswith', 'endswith', 'icontains', 'istartswith', 'iendswith']:
                 match_query[field] = {mongo_operators[operator]: f".*{value}.*", '$options': 'i'}
+            elif operator in mongo_comparison_operators:
+                if isinstance(value, F):
+                    match_query['$expr'] = {mongo_operators[operator]: [f"${field}", value.to_dict()]}
+                else:
+                    match_query[field] = {mongo_operators[operator]: value}
             else:
                 match_query[field] = {mongo_operators[operator]: value}
 
@@ -234,3 +249,38 @@ class Q:
     def __invert__(self):
         combined_conditions = {"$not": [self.conditions]}
         return Q(**combined_conditions)
+
+
+class F:
+    def __init__(self, field):
+        if isinstance(field, str):
+            self.field = f"${field}"
+        else:
+            self.field = field
+
+    def to_dict(self):
+        return self.field
+
+    def __add__(self, other):
+        if isinstance(other, F):
+            other = other.field
+        combined_field = {"$add": [self.field, other]}
+        return F(combined_field)
+
+    def __sub__(self, other):
+        if isinstance(other, F):
+            other = other.field
+        combined_field = {"$subtract": [self.field, other]}
+        return F(combined_field)
+
+    def __mul__(self, other):
+        if isinstance(other, F):
+            other = other.field
+        combined_field = {"$multiply": [self.field, other]}
+        return F(combined_field)
+
+    def __truediv__(self, other):
+        if isinstance(other, F):
+            other = other.field
+        combined_field = {"$divide": [self.field, other]}
+        return F(combined_field)
