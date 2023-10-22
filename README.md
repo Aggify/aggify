@@ -19,7 +19,7 @@ Aggify is a Python library for generating MongoDB aggregation pipelines, designe
 - [x] `$limit`: Limits the number of documents in the result.
 - [x] `$skip`: Skips a specified number of documents in the result.
 - [x] `$lookup`: Performs a left outer join to combine documents from two collections.
-- [ ] `$sort`: Sorts the documents in the aggregation pipeline.
+- [x] `$sort`: Sorts the documents in the aggregation pipeline.
 - [ ] `$addFields`: Adds new fields to the documents in the pipeline.
 - [ ] `$replaceRoot`: Replaces the document structure with a new one.
 - [ ] `$group` (with accumulators): Performs various aggregation operations like counting, summing, averaging, and more.
