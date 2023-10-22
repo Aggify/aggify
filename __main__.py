@@ -71,6 +71,7 @@ class Aggify:
             'gte': '$gte',
             'in': "$in",
             'ne': "$ne",
+            'not': "$not",
         }
 
         match_query = {}
@@ -197,7 +198,7 @@ class Aggify:
             {"$project": projects}
         )
         return self
-    
+
     def group(self, **kwargs):
         group_dict = {}
         for k, v in kwargs.items():
@@ -228,4 +229,8 @@ class Q:
 
     def __and__(self, other):
         combined_conditions = {"$and": [self.conditions, other.to_dict()["$match"]]}
+        return Q(**combined_conditions)
+
+    def __invert__(self):
+        combined_conditions = {"$not": [self.conditions]}
         return Q(**combined_conditions)
