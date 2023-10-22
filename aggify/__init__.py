@@ -1,1 +1,1 @@
-from .aggify import Aggify
+from .aggify import *

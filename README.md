@@ -51,7 +51,7 @@ from pprint import pprint
 query = Aggify(PostDocument)
 
 # Define a complex query with filters and projections
-query.filter(
+var = query.filter(
     caption__contains="ssad",
     location__in=[1, 2, 3],
     archived_at=False,
@@ -65,7 +65,7 @@ query.filter(
     owner__deleted_at=None
 ).filter(
     (Q(caption__in=[1, 2, 3]) | Q(location__contains='test')) & Q(deleted_at=None)
-)[3:7]
+).order_by('-code')[3:7]
 
 # Get the aggregated results
 result = query.aggregate()

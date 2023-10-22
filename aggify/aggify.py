@@ -221,6 +221,12 @@ class Aggify:
         self.pipelines.append({'$group': group_dict})
         return self
 
+    def order_by(self, field):
+        self.pipelines.append({'$sort': {
+            f'{field.replace("-", "")}': -1 if field.startswith('-') else 1}
+        })
+        return self
+
     def aggregate(self):
         """
         Returns the aggregated results.
