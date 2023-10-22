@@ -1,3 +1,6 @@
+from mongoengine import EmbeddedDocument
+
+
 class Aggify:
 
     def __init__(self, base_model):
@@ -163,7 +166,7 @@ class Aggify:
             if not join_field:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
-            if 'document_type_obj' not in join_field.__dict__:
+            if 'document_type_obj' not in join_field.__dict__ or issubclass(join_field.document_type, EmbeddedDocument):
                 self.pipelines.append(self.match([(key, value)]))
             else:
                 from_collection = join_field.document_type._meta['collection']
@@ -172,6 +175,7 @@ class Aggify:
                 matches = []
                 for key, value in self.q.items():
                     if key.split('__')[0] == split_query[0]:
+                        key = local_field
                         skip_list.append(key)
                         matches.append((key.replace('__', '.'), value))
                 self.pipelines.extend([
