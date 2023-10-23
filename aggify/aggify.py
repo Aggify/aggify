@@ -1,4 +1,4 @@
-from mongoengine import EmbeddedDocument
+from mongoengine import EmbeddedDocument, EmbeddedDocumentField
 
 
 class Aggify:
@@ -48,8 +48,7 @@ class Aggify:
             self.pipelines = self.combine_sequential_matches()
         return self
 
-    @staticmethod
-    def match(matches):
+    def match(self, matches):
         """
         Generates a MongoDB match pipeline stage.
 
@@ -93,8 +92,10 @@ class Aggify:
             if '__' not in key:
                 match_query[key] = value
                 continue
-
-            field, operator = key.rsplit('__', 1)
+            field, operator, *_ = key.split('__')
+            if self.base_model and isinstance(self.base_model._fields.get(field), EmbeddedDocumentField):
+                self.pipelines.append(self.match([(key.replace("__", ".", 1), value)]))
+                continue
             if operator not in mongo_operators:
                 raise ValueError(f"Unsupported operator: {operator}")
 
@@ -167,7 +168,8 @@ class Aggify:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
             if 'document_type_obj' not in join_field.__dict__ or issubclass(join_field.document_type, EmbeddedDocument):
-                self.pipelines.append(self.match([(key, value)]))
+                if (match := self.match([(key, value)]).get("$match")) != {}:
+                    self.pipelines.append(match)
             else:
                 from_collection = join_field.document_type._meta['collection']
                 local_field = join_field.db_field
@@ -175,9 +177,9 @@ class Aggify:
                 matches = []
                 for key, value in self.q.items():
                     if key.split('__')[0] == split_query[0]:
-                        key = local_field
                         skip_list.append(key)
-                        matches.append((key.replace('__', '.'), value))
+                        if (match := self.match([(key.replace("__", ".", 1), value)]).get("$match")) != {}:
+                            matches.append(match)
                 self.pipelines.extend([
                     self.lookup(
                         from_collection=from_collection,
@@ -185,7 +187,7 @@ class Aggify:
                         as_name=as_name
                     ),
                     self.unwind(as_name),
-                    self.match(matches)
+                    *[{"$match": match} for match in matches]
                 ])
 
     def combine_sequential_matches(self):
@@ -247,7 +249,7 @@ class Aggify:
 
 class Q:
     def __init__(self, **conditions):
-        self.conditions = Aggify.match(conditions.items()).get('$match')
+        self.conditions = Aggify(None).match(matches=conditions.items()).get('$match')
 
     def to_dict(self):
         return {"$match": self.conditions}
