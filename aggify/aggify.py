@@ -220,12 +220,36 @@ class Aggify:
         )
         return self
 
-    def group(self, **kwargs):
-        group_dict = {}
-        for k, v in kwargs.items():
-            group_dict[k] = v
-        self.pipelines.append({'$group': group_dict})
+    def group(self, key="_id"):
+        self.pipelines.append({'$group': {"_id": f"${key}"}})
         return self
+
+    def annotate(self, annotate_name, accumulator, f):
+        if (stage := list(self.pipelines[-1].keys())[0]) != "$group":
+            raise ValueError(f"Annotations apply only to $group, not to {stage}.")
+
+        accumulator_dict = {
+            "sum": "$sum",
+            "avg": "$avg",
+            "first": "$first",
+            "last": "$last",
+            "max": "$max",
+            "min": "$min",
+            "push": "$push",
+            "addToSet": "$addToSet",
+            "stdDevPop": "$stdDevPop",
+            "stdDevSamp": "$stdDevSamp"
+        }
+
+        acc = accumulator_dict.get(accumulator, None)
+        if not acc:
+            raise ValueError(f"Invalid accumulator: {accumulator}")
+
+        if isinstance(f, F):
+            value = f.to_dict()
+        else:
+            value = f"${f}"
+        self.pipelines[-1]['$group'] |= {annotate_name: {acc: value}}
 
     def order_by(self, field):
         self.pipelines.append({'$sort': {
