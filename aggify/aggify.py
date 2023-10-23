@@ -231,6 +231,10 @@ class Aggify:
         })
         return self
 
+    def raw(self, raw_query):
+        self.pipelines.append(raw_query)
+        return self
+
     def aggregate(self):
         """
         Returns the aggregated results.
