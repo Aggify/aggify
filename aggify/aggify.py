@@ -298,3 +298,39 @@ class F:
             other = other.field
         combined_field = {"$divide": [self.field, other]}
         return F(combined_field)
+
+
+class Cond:
+    """
+    input: Cond(23, '>', 20, 'hi', 'bye')
+    return: {'$cond': {'if': {'$gt': [23, 20]}, 'then': 'hi', 'else': 'bye'}}
+    """
+    OPERATOR_MAPPING = {
+        '>': '$gt',
+        '>=': '$gte',
+        '<': '$lt',
+        '<=': '$lte',
+        '==': '$eq',
+        '!=': '$ne'
+    }
+
+    def __init__(self, value1, condition, value2, then_value, else_value):
+        self.value1 = value1
+        self.value2 = value2
+        self.condition = self._map_condition(condition)
+        self.then_value = then_value
+        self.else_value = else_value
+
+    def _map_condition(self, condition):
+        if condition in self.OPERATOR_MAPPING:
+            return self.OPERATOR_MAPPING[condition]
+        raise ValueError("Unsupported operator")
+
+    def to_dict(self):
+        return {
+            "$cond": {
+                "if": {self.condition: [self.value1, self.value2]},
+                "then": self.then_value,
+                "else": self.else_value
+            }
+        }
