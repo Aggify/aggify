@@ -279,11 +279,19 @@ class Q:
         return {"$match": self.conditions}
 
     def __or__(self, other):
-        combined_conditions = {"$or": [self.conditions, other.to_dict()["$match"]]}
+        if self.conditions.get("$or", None):
+            self.conditions["$or"].append(other.to_dict()["$match"])
+            combined_conditions = self.conditions
+        else:
+            combined_conditions = {"$or": [self.conditions, other.to_dict()["$match"]]}
         return Q(**combined_conditions)
 
     def __and__(self, other):
-        combined_conditions = {"$and": [self.conditions, other.to_dict()["$match"]]}
+        if self.conditions.get("$and", None):
+            self.conditions["$and"].append(other.to_dict()["$match"])
+            combined_conditions = self.conditions
+        else:
+            combined_conditions = {"$and": [self.conditions, other.to_dict()["$match"]]}
         return Q(**combined_conditions)
 
     def __invert__(self):
