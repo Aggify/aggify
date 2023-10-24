@@ -11,6 +11,14 @@ class TestQ:
         assert q_combined.to_dict() == {
             "$match": {"$or": [q1.to_dict()["$match"], q2.to_dict()["$match"]]}}
 
+    def test_or_operator_with_multiple_conditions_more_than_rwo(self):
+        q1 = Q(name="John")
+        q2 = Q(name="Alice")
+        q3 = Q(name="Bob")
+        q_combined = q1 | q2 | q3
+        assert q_combined.to_dict() == {
+            "$match": {"$or": [q1.to_dict()["$match"], q2.to_dict()["$match"], q3.to_dict()["$match"]]}}
+
     # Test combining NOT operators with AND
     def test_combine_not_operators_with_and(self):
         q1 = Q(name="John")

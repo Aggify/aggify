@@ -70,5 +70,6 @@ class TestF:
     def test_multiplication_with_multiple_fields(self):
         f1 = F("quantity")
         f2 = F("price")
-        f_combined = f1 * f2
-        assert f_combined.to_dict() == {"$multiply": ["$quantity", "$price"]}
+        f3 = F("nano")
+        f_combined = f1 * f2 * f3
+        assert f_combined.to_dict() == {"$multiply": ["$quantity", "$price", "$nano"]}
