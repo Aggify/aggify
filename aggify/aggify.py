@@ -312,25 +312,45 @@ class F:
     def __add__(self, other):
         if isinstance(other, F):
             other = other.field
-        combined_field = {"$add": [self.field, other]}
+
+        if type(self.field) == dict and self.field.get("$add", None):
+            self.field["$add"].append(other)
+            combined_field = self.field
+        else:
+            combined_field = {"$add": [self.field, other]}
         return F(combined_field)
 
     def __sub__(self, other):
         if isinstance(other, F):
             other = other.field
-        combined_field = {"$subtract": [self.field, other]}
+
+        if type(self.field) == dict and self.field.get("$subtract", None):
+            self.field["$subtract"].append(other)
+            combined_field = self.field
+        else:
+            combined_field = {"$subtract": [self.field, other]}
         return F(combined_field)
 
     def __mul__(self, other):
         if isinstance(other, F):
             other = other.field
-        combined_field = {"$multiply": [self.field, other]}
+
+        if type(self.field) == dict and self.field.get("$multiply", None):
+            self.field["$multiply"].append(other)
+            combined_field = self.field
+        else:
+            combined_field = {"$multiply": [self.field, other]}
         return F(combined_field)
 
     def __truediv__(self, other):
         if isinstance(other, F):
             other = other.field
-        combined_field = {"$divide": [self.field, other]}
+
+        if type(self.field) == dict and self.field.get("$divide", None):
+            self.field["$divide"].append(other)
+            combined_field = self.field
+        else:
+            combined_field = {"$divide": [self.field, other]}
         return F(combined_field)
 
 
