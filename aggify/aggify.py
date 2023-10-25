@@ -62,11 +62,11 @@ class Aggify:
             'exact': '$eq',
             'iexact': '$eq',
             'contains': '$regex',
-            'icontains': '$regex',
+            'icontains': '$regex',  # noqa
             'startswith': '$regex',
-            'istartswith': '$regex',
+            'istartswith': '$regex',  # noqa
             'endswith': '$regex',
-            'iendswith': '$regex',
+            'iendswith': '$regex',  # noqa
             'in': "$in",
             'ne': "$ne",
             'not': "$not",
@@ -93,7 +93,7 @@ class Aggify:
                 match_query[key] = value
                 continue
             field, operator, *_ = key.split('__')
-            if self.base_model and isinstance(self.base_model._fields.get(field), EmbeddedDocumentField):
+            if self.base_model and isinstance(self.base_model._fields.get(field), EmbeddedDocumentField):  # noqa
                 self.pipelines.append(self.match([(key.replace("__", ".", 1), value)]))
                 continue
             if operator not in mongo_operators:
@@ -101,7 +101,7 @@ class Aggify:
 
             if operator in ['exact', 'iexact']:
                 match_query[field] = {mongo_operators[operator]: value}
-            elif operator in ['contains', 'startswith', 'endswith', 'icontains', 'istartswith', 'iendswith']:
+            elif operator in ['contains', 'startswith', 'endswith', 'icontains', 'istartswith', 'iendswith']:  # noqa
                 match_query[field] = {mongo_operators[operator]: f".*{value}.*", '$options': 'i'}
             elif operator in mongo_comparison_operators:
                 if isinstance(value, F):
@@ -161,9 +161,10 @@ class Aggify:
         """
         skip_list = []
         for key, value in self.q.items():
-            if key in skip_list: continue
+            if key in skip_list:
+                continue
             split_query = key.split('__')
-            join_field = self.base_model._fields.get(split_query[0])
+            join_field = self.base_model._fields.get(split_query[0])  # noqa
             if not join_field:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
@@ -171,14 +172,14 @@ class Aggify:
                 if (match := self.match([(key, value)]).get("$match")) != {}:
                     self.pipelines.append(match)
             else:
-                from_collection = join_field.document_type._meta['collection']
+                from_collection = join_field.document_type._meta['collection']  # noqa
                 local_field = join_field.db_field
                 as_name = join_field.name
                 matches = []
-                for key, value in self.q.items():
-                    if key.split('__')[0] == split_query[0]:
-                        skip_list.append(key)
-                        if (match := self.match([(key.replace("__", ".", 1), value)]).get("$match")) != {}:
+                for k, v in self.q.items():
+                    if k.split('__')[0] == split_query[0]:
+                        skip_list.append(k)
+                        if (match := self.match([(k.replace("__", ".", 1), v)]).get("$match")) != {}:
                             matches.append(match)
                 self.pipelines.extend([
                     self.lookup(
@@ -238,7 +239,7 @@ class Aggify:
             "push": "$push",
             "addToSet": "$addToSet",
             "stdDevPop": "$stdDevPop",
-            "stdDevSamp": "$stdDevSamp"
+            "stdDevSamp": "$stdDevSamp"  # noqa
         }
 
         acc = accumulator_dict.get(accumulator, None)
