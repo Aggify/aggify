@@ -39,7 +39,7 @@ class Aggify:
     def filter(self, arg=None, **kwargs):
         if arg:
             if isinstance(arg, Q):
-                self.pipelines.append(arg.to_dict())
+                self.pipelines.append(dict(arg))
             else:
                 raise ValueError(f"Invalid Q object")
         else:
@@ -277,23 +277,23 @@ class Q:
     def __init__(self, **conditions):
         self.conditions = Aggify(None).match(matches=conditions.items()).get('$match')
 
-    def to_dict(self):
-        return {"$match": self.conditions}
+    def __iter__(self):
+        yield '$match', self.conditions
 
     def __or__(self, other):
         if self.conditions.get("$or", None):
-            self.conditions["$or"].append(other.to_dict()["$match"])
+            self.conditions["$or"].append(dict(other)["$match"])
             combined_conditions = self.conditions
         else:
-            combined_conditions = {"$or": [self.conditions, other.to_dict()["$match"]]}
+            combined_conditions = {"$or": [self.conditions, dict(other)["$match"]]}
         return Q(**combined_conditions)
 
     def __and__(self, other):
         if self.conditions.get("$and", None):
-            self.conditions["$and"].append(other.to_dict()["$match"])
+            self.conditions["$and"].append(dict(other)["$match"])
             combined_conditions = self.conditions
         else:
-            combined_conditions = {"$and": [self.conditions, other.to_dict()["$match"]]}
+            combined_conditions = {"$and": [self.conditions, dict(other)["$match"]]}
         return Q(**combined_conditions)
 
     def __invert__(self):
@@ -382,11 +382,22 @@ class Cond:
             return self.OPERATOR_MAPPING[condition]
         raise ValueError("Unsupported operator")
 
-    def to_dict(self):
-        return {
-            "$cond": {
+    def __iter__(self):
+        """Iterator used by `dict` to create a dictionary from a `Cond` object
+
+        With this method we are now able to do this:
+        c = Cond(...)
+        dict_of_c = dict(c)
+
+        instead of c.to_dict()
+
+        Returns:
+            A tuple of '$cond' and its value
+        """
+        yield (
+            "$cond", {
                 "if": {self.condition: [self.value1, self.value2]},
                 "then": self.then_value,
                 "else": self.else_value
             }
-        }
+        )
