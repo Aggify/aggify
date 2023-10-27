@@ -169,7 +169,8 @@ class Aggify:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
             if 'document_type_obj' not in join_field.__dict__ or issubclass(join_field.document_type, EmbeddedDocument):
-                if (match := self.match([(key, value)]).get("$match")) != {}:
+                match = self.match([(key, value)])
+                if (match.get("$match")) != {}:
                     self.pipelines.append(match)
             else:
                 from_collection = join_field.document_type._meta['collection']  # noqa
