@@ -1,15 +1,15 @@
 from setuptools import setup, find_packages
 
 try:
-    with open("README.rst") as fin:
+    with open("README.md") as fin:
         LONG_DESCRIPTION = fin.read()
 except Exception:  # noqa
-    LONG_DESCRIPTION = None
+    LONG_DESCRIPTION = ""
 
 
 setup(
     name="aggify",
-    version="0.1.3",
+    version="0.1.4",
     description="A MongoDB aggregation generator for Mongoengine",
     author="SeYeD.Dev",
     author_email="me@seyed.dev",
