@@ -1,12 +1,5 @@
 from setuptools import setup, find_packages
 
-try:
-    with open("README.md") as fin:
-        LONG_DESCRIPTION = fin.read()
-except Exception:  # noqa
-    LONG_DESCRIPTION = ""
-
-
 setup(
     name="aggify",
     version="0.1.4",
@@ -17,7 +10,7 @@ setup(
     packages=find_packages(),
     install_requires=["mongoengine >= 0.27.0"],
     python_requires=">=3.10",
-    long_description=LONG_DESCRIPTION,
+    long_description=open('README.md', 'r').read(),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
