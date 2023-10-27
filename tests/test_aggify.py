@@ -1,3 +1,5 @@
+import pytest
+
 from aggify import Aggify, F, Q, Cond
 from mongoengine import Document, StringField, IntField
 
@@ -17,6 +19,45 @@ class BaseModel(Document):
 
 
 class TestAggify:
+    def test__getitem__int_zero(self):
+        aggify = Aggify(BaseModel)
+        thing = aggify[0]
+        assert not thing.pipelines
+
+    def test__getitem__int_non_zero(self):
+        aggify = Aggify(BaseModel)
+        thing = aggify[1]
+        assert isinstance(thing, Aggify)
+        assert len(thing.pipelines) == 1
+        assert thing.pipelines[-1]['$limit'] == 1
+
+        thing = aggify[2]
+        assert thing.pipelines[-1]['$limit'] == 2
+        assert len(thing.pipelines) == 2
+
+        thing = thing[3]
+        assert thing.pipelines[-1]['$limit'] == 3
+        assert len(thing.pipelines) == 3
+
+    def test__getitem__slice(self):
+        aggify = Aggify(BaseModel)
+        thing = aggify[0:10]
+        assert isinstance(thing, Aggify)
+        assert thing.pipelines[-1]['$limit'] == 10
+        assert len(thing.pipelines) == 1  # cause start is zero and it is falsy
+
+        aggify = Aggify(BaseModel)
+        thing = aggify[2:10]
+        assert len(thing.pipelines) == 2
+        skip, limit = thing.pipelines[-2:]
+        assert skip['$skip'] == 2
+        assert limit['$limit'] == 8
+
+    def test__getitem__value_error(self):
+        with pytest.raises(ValueError) as err:
+            Aggify(BaseModel)['hello']
+
+        assert 'invalid' in err.__str__().lower()
 
     # Test filtering and projection
     def test_filter_and_project(self):
