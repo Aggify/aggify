@@ -87,7 +87,7 @@ class Aggify:
             if isinstance(value, F):
                 if '__' not in key:
                     raise ValueError("You should use comparison operators with F function")
-                if (operator := key.rsplit("__", 1)[1]) not in list(mongo_comparison_operators.keys()):
+                if (operator := key.rsplit("__", 1)[1]) not in mongo_comparison_operators:
                     raise ValueError(f"Invalid operator: {operator}")
             if '__' not in key:
                 match_query[key] = value
