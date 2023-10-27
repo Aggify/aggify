@@ -382,11 +382,22 @@ class Cond:
             return self.OPERATOR_MAPPING[condition]
         raise ValueError("Unsupported operator")
 
-    def to_dict(self):
-        return {
-            "$cond": {
+    def __iter__(self):
+        """Iterator used by `dict` to create a dictionary from a `Cond` object
+
+        With this method we are now able to do this:
+        c = Cond(...)
+        dict_of_c = dict(c)
+
+        instead of c.to_dict()
+
+        Returns:
+            A tuple of '$cond' and its value
+        """
+        yield (
+            "$cond", {
                 "if": {self.condition: [self.value1, self.value2]},
                 "then": self.then_value,
                 "else": self.else_value
             }
-        }
+        )

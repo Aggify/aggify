@@ -77,7 +77,7 @@ class TestAggify:
     # Test complex conditional expression in projection
     def test_complex_conditional_expression_in_projection(self):
         aggify = Aggify(BaseModel)
-        aggify.project(name=1, age=1, custom_field=Cond(F("age").to_dict(), '>', 30, "Adult", "Child").to_dict())
+        aggify.project(name=1, age=1, custom_field=dict(Cond(F("age").to_dict(), '>', 30, "Adult", "Child")))
         assert len(aggify.pipelines) == 1
         assert "custom_field" in aggify.pipelines[0]["$project"]
         assert aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["if"] == {"$gt": ["$age", 30]}
