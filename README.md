@@ -45,34 +45,92 @@ Here's a code snippet that demonstrates how to use Aggify to construct a MongoDB
 
 ```python
 from aggify import Aggify, Q
-from models import PostDocument
+from mongoengine import Document, fields
 from pprint import pprint
 
-# Create a Aggify instance with the base model (e.g., PostDocument)
+class AccountDocument(Document):
+    username = fields.StringField()
+    display_name = fields.StringField()
+    phone = fields.StringField()
+    is_verified = fields.BooleanField()
+    disabled_at = fields.LongField()
+    deleted_at = fields.LongField()
+    banned_at = fields.LongField()
+    
+    meta = {
+        'collection': 'account',
+        'ordering': ['-_id'],
+        'indexes': [
+            'username', 'phone', 'display_name',
+            'deleted_at', 'disabled_at', 'banned_at'
+        ],
+    }
+    
+class PostDocument(Document):
+    owner = fields.ReferenceField('AccountDocument', db_field='owner_id')
+    caption = fields.StringField()
+    location = fields.StringField()
+    comment_disabled = fields.BooleanField()
+    stat_disabled = fields.BooleanField()
+    hashtags = fields.ListField()
+    archived_at = fields.LongField()
+    deleted_at = fields.LongField()
+
+
+# Create Aggify instance with the base model (e.g., PostDocument)
 query = Aggify(PostDocument)
 
-# Define a complex query with filters and projections
-var = query.filter(
-    caption__contains="ssad",
-    location__in=[1, 2, 3],
-    archived_at=False,
-    owner__deleted_at=None,
-    owner__disabled_at=None
-).project(
-    caption=1,
-    deleted_at=0
-).filter(
-    location__in=[1, 2, 3],
-    owner__deleted_at=None
-).filter(
-    (Q(caption__in=[1, 2, 3]) | Q(location__contains='test')) & Q(deleted_at=None)
-).order_by('-code')[3:7]
+pprint(query.filter(caption__contains="hello").pipelines)
+# output :
+#    [{'$match': {'caption': {'$options': 'i', '$regex': '.*hello.*'}}}]
 
-# Get the aggregated results
-result = query.aggregate()
 
-# Print the generated aggregation pipelines
-pprint(query.pipelines)
+pprint(query.filter(caption__contains="hello", owner__deleted_at=None).pipelines)
+# output :
+#         [{'$match': {'caption': {'$options': 'i', '$regex': '.*hello.*'}}},
+#          {'$lookup': {'as': 'owner',
+#                       'foreignField': '_id',
+#                       'from': 'account',
+#                       'localField': 'owner_id'}},
+#          {'$unwind': {'path': '$owner', 'preserveNullAndEmptyArrays': True}},
+#          {'$match': {'owner.deleted_at': None}}]
+
+
+pprint(
+    query.filter(caption__contains="hello").project(caption=1, deleted_at=0).pipelines
+)
+
+# output :
+#         [{'$match': {'caption': {'$options': 'i', '$regex': '.*hello.*'}}},
+#          {'$project': {'caption': 1, 'deleted_at': 0}}]
+
+pprint(
+    query.filter(
+        (Q(caption__contains=['hello']) | Q(location__contains='test')) & Q(deleted_at=None)
+    ).pipelines
+)
+
+# output :
+        # [{'$match': {'$and': [{'$or': [{'caption': {'$options': 'i',
+        #                                             '$regex': ".*['hello'].*"}},
+        #                                {'location': {'$options': 'i',
+        #                                              '$regex': '.*test.*'}}]},
+        #                       {'deleted_at': None}]}}]
+
+pprint(
+    query.filter(caption='hello')[3:10].pipelines
+)
+
+# output:
+#         [{'$match': {'caption': 'hello'}}, {'$skip': 3}, {'$limit': 7}]
+
+pprint(
+    query.filter(caption='hello').order_by('-_id').pipelines
+)
+
+# output:
+#         [{'$match': {'caption': 'hello'}}, {'$sort': {'_id': -1}}]
+
 ```
 
 In the sample usage above, you can see how Aggify simplifies the construction of MongoDB aggregation pipelines by allowing you to chain filters, projections, and other operations to build complex queries. The pprint(query.pipelines) line demonstrates how you can inspect the generated aggregation pipeline for debugging or analysis.
