@@ -1,5 +1,18 @@
+# Makefile for aggify
+
+# Environment variables
+PYTHON = python
+
+.PHONY: init build clean
+
+init:
+	$(PYTHON) -m pip install build twine
+
 build:
-	python setup.py sdist
+	$(PYTHON) -m build
+
+clean:
+	rm -rf dist/
 
 # Publish to PyPI using twine
 publish:
