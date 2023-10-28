@@ -164,3 +164,9 @@ class TestAggify:
             }
         }
         assert add_fields_stage.pipelines[0] == expected_stage
+
+    def test_filter_value_error(self):
+        with pytest.raises(ValueError) as err:
+            Aggify(BaseModel).filter(arg='Hi')
+
+        assert 'invalid' in err.__str__().lower()
