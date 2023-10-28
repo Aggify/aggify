@@ -156,9 +156,7 @@ class Aggify:
         }
 
     def to_aggregate(self):
-        """
-        Builds the pipelines list based on the query parameters.
-        """
+        """Builds the pipelines list based on the query parameters."""
         skip_list = []
         for key, value in self.q.items():
             if key in skip_list:
@@ -169,7 +167,7 @@ class Aggify:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
             if 'document_type_obj' not in join_field.__dict__ or issubclass(join_field.document_type, EmbeddedDocument):
-                match = self.match([(key, value)])
+                match = self._match([(key, value)])
                 if (match.get("$match")) != {}:
                     self.pipelines.append(match)
             else:
@@ -180,7 +178,7 @@ class Aggify:
                 for k, v in self.q.items():
                     if k.split('__')[0] == split_query[0]:
                         skip_list.append(k)
-                        if (match := self.match([(k.replace("__", ".", 1), v)]).get("$match")) != {}:
+                        if (match := self._match([(k.replace("__", ".", 1), v)]).get("$match")) != {}:
                             matches.append(match)
                 self.pipelines.extend([
                     self.lookup(
@@ -298,7 +296,7 @@ class Aggify:
 
 class Q:
     def __init__(self, **conditions):
-        self.conditions = Aggify(None).match(matches=conditions.items()).get('$match')
+        self.conditions = Aggify(None)._match(matches=conditions.items()).get('$match')
 
     def __iter__(self):
         yield '$match', self.conditions

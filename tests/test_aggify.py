@@ -170,3 +170,9 @@ class TestAggify:
             Aggify(BaseModel).filter(arg='Hi')
 
         assert 'invalid' in err.__str__().lower()
+
+    def test_group(self):
+        aggify = Aggify(BaseModel)
+        thing = aggify.group('name')
+        assert len(thing.pipelines) == 1
+        assert thing.pipelines[-1]['$group'] == {'_id': '$name'}
