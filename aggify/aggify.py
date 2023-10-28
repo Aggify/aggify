@@ -173,9 +173,7 @@ class Aggify:
         return {"$unwind": {"path": f"${path}", "preserveNullAndEmptyArrays": preserve}}
 
     def to_aggregate(self):
-        """
-        Builds the pipelines list based on the query parameters.
-        """
+        """Builds the pipelines list based on the query parameters."""
         skip_list = []
         for key, value in self.q.items():  # type: ignore
             if key in skip_list:
@@ -250,8 +248,11 @@ class Aggify:
         return self
 
     def annotate(self, annotate_name, accumulator, f):
-        if (stage := list(self.pipelines[-1].keys())[0]) != "$group":
-            raise ValueError(f"Annotations apply only to $group, not to {stage}.")
+        try:
+            if (stage := list(self.pipelines[-1].keys())[0]) != "$group":
+                raise ValueError(f"Annotations apply only to $group, not to {stage}.")
+        except IndexError:
+            raise ValueError(f"Annotations apply only to $group, you're pipeline is empty.")
 
         accumulator_dict = {
             "sum": "$sum",
@@ -266,15 +267,17 @@ class Aggify:
             "stdDevSamp": "$stdDevSamp",  # noqa
         }
 
-        acc = accumulator_dict.get(accumulator, None)
-        if not acc:
-            raise ValueError(f"Invalid accumulator: {accumulator}")
+        try:
+            acc = accumulator_dict[accumulator]
+        except KeyError:
+            raise ValueError(f"Invalid accumulator: {accumulator}") from None
 
         if isinstance(f, F):
             value = f.to_dict()
         else:
             value = f"${f}"
         self.pipelines[-1]["$group"] |= {annotate_name: {acc: value}}
+        return self
 
     def order_by(self, field):
         self.pipelines.append(
