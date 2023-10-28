@@ -2,7 +2,6 @@ from aggify import F  # Import from your actual module
 
 
 class TestF:
-
     # Test subtraction using F class
     def test_subtraction(self):
         f1 = F("age")
