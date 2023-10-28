@@ -134,7 +134,7 @@ class TestAggify:
     def test_add_fields_string_literal(self):
         aggify = Aggify(BaseModel)
         fields = {"new_field_1": "some_string", "new_field_2": "another_string"}
-        add_fields_stage = aggify.addFields(fields)
+        add_fields_stage = aggify.add_fields(fields)
 
         expected_stage = {
             "$addFields": {
@@ -151,7 +151,7 @@ class TestAggify:
             "new_field_1": F("existing_field") + 10,
             "new_field_2": F("field_a") * F("field_b"),
         }
-        add_fields_stage = aggify.addFields(fields)
+        add_fields_stage = aggify.add_fields(fields)
 
         expected_stage = {
             "$addFields": {

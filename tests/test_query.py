@@ -110,7 +110,7 @@ cases = [
     ),
     TestCase(
         compiled_query=(
-            Aggify(PostDocument).addFields(
+            Aggify(PostDocument).add_fields(
                 {
                     "new_field_1": "some_string",
                     "new_field_2": F("existing_field") + 10,
