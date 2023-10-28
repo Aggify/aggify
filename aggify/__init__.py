@@ -1,5 +1,5 @@
 from aggify.aggify import Aggify, F, Q
-from aggify.match import Cond
+from aggify.compiler import Cond
 
 __all__ = [
     "Aggify",
