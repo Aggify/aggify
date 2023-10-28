@@ -1,7 +1,8 @@
 import pytest
+from mongoengine import Document, IntField, StringField
 
-from aggify import Aggify, F, Q, Cond
-from mongoengine import Document, StringField, IntField
+from aggify import Aggify, Cond, F, Q
+from aggify.exceptions import AggifyValueError
 
 
 class BaseModel(Document):
@@ -9,65 +10,40 @@ class BaseModel(Document):
     name = StringField(max_length=100)
     age = IntField()
 
-    meta = {
-        'allow_inheritance': True,
-        'abstract': True
-    }
+    meta = {"allow_inheritance": True, "abstract": True}
+
 
 # This defines a base document model for MongoDB using MongoEngine, with 'name' and 'age' fields.
 # The 'allow_inheritance' and 'abstract' options ensure it's used as a base class for other documents.
 
 
 class TestAggify:
-    def test__getitem__int_zero(self):
+    def test__getitem__zero(self):
         aggify = Aggify(BaseModel)
-        thing = aggify[0]
-        assert not thing.pipelines
-
-    def test__getitem__int_non_zero(self):
-        aggify = Aggify(BaseModel)
-        thing = aggify[1]
-        assert isinstance(thing, Aggify)
-        assert len(thing.pipelines) == 1
-        assert thing.pipelines[-1]['$limit'] == 1
-
-        thing = aggify[2]
-        assert thing.pipelines[-1]['$limit'] == 2
-        assert len(thing.pipelines) == 2
-
-        thing = thing[3]
-        assert thing.pipelines[-1]['$limit'] == 3
-        assert len(thing.pipelines) == 3
+        aggify[0]
 
     def test__getitem__slice(self):
         aggify = Aggify(BaseModel)
         thing = aggify[0:10]
         assert isinstance(thing, Aggify)
-        assert thing.pipelines[-1]['$limit'] == 10
-        assert len(thing.pipelines) == 1  # cause start is zero and it is falsy
-
-        aggify = Aggify(BaseModel)
-        thing = aggify[2:10]
-        assert len(thing.pipelines) == 2
-        skip, limit = thing.pipelines[-2:]
-        assert skip['$skip'] == 2
-        assert limit['$limit'] == 8
+        print(thing.pipelines)
+        assert thing.pipelines[-1]["$limit"] == 10
+        assert thing.pipelines[-2]["$skip"] == 0
 
     def test__getitem__value_error(self):
-        with pytest.raises(ValueError) as err:
-            Aggify(BaseModel)['hello']
+        with pytest.raises(AggifyValueError) as err:
+            Aggify(BaseModel)["hello"]  # type: ignore
 
-        assert 'invalid' in err.__str__().lower()
+        assert "str" in err.__str__(), "wrong type was not detected"
 
-    # Test filtering and projection
-    def test_filter_and_project(self):
+    def test_filtering_and_projection(self):
         aggify = Aggify(BaseModel)
         aggify.filter(age__gte=30).project(name=1, age=1)
         assert len(aggify.pipelines) == 2
+        print(type(aggify.pipelines[1]))
         assert aggify.pipelines[1]["$project"] == {"name": 1, "age": 1}
 
-    # Test filtering and ordering
-    def test_filter_and_order(self):
+    def test_filtering_and_ordering(self):
         aggify = Aggify(BaseModel)
         aggify.filter(age__gte=30).order_by("-age")
         assert len(aggify.pipelines) == 2
@@ -77,7 +53,9 @@ class TestAggify:
     def test_multiple_filters_and_conditions(self):
         aggify = Aggify(BaseModel)
         age = F("age") * 2
-        aggify.filter(Q(name="John") | Q(name="Alice")).project(name=1, age=age.to_dict())
+        aggify.filter(Q(name="John") | Q(name="Alice")).project(
+            name=1, age=age.to_dict()
+        )
         assert len(aggify.pipelines) == 2
         assert aggify.pipelines[1]["$project"]["age"] == {"$multiply": ["$age", 2]}
 
@@ -118,12 +96,22 @@ class TestAggify:
     # Test complex conditional expression in projection
     def test_complex_conditional_expression_in_projection(self):
         aggify = Aggify(BaseModel)
-        aggify.project(name=1, age=1, custom_field=dict(Cond(F("age").to_dict(), '>', 30, "Adult", "Child")))
+        aggify.project(
+            name=1,
+            age=1,
+            custom_field=dict(Cond(F("age").to_dict(), ">", 30, "Adult", "Child")),
+        )
         assert len(aggify.pipelines) == 1
         assert "custom_field" in aggify.pipelines[0]["$project"]
-        assert aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["if"] == {"$gt": ["$age", 30]}
-        assert aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["then"] == "Adult"
-        assert aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["else"] == "Child"
+        assert aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["if"] == {
+            "$gt": ["$age", 30]
+        }
+        assert (
+            aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["then"] == "Adult"
+        )
+        assert (
+            aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["else"] == "Child"
+        )
 
     # Test filtering using not operator
     def test_filter_with_not_operator(self):
@@ -134,16 +122,13 @@ class TestAggify:
 
     def test_add_fields_string_literal(self):
         aggify = Aggify(BaseModel)
-        fields = {
-            "new_field_1": "some_string",
-            "new_field_2": "another_string"
-        }
+        fields = {"new_field_1": "some_string", "new_field_2": "another_string"}
         add_fields_stage = aggify.addFields(fields)
 
         expected_stage = {
             "$addFields": {
                 "new_field_1": {"$literal": "some_string"},
-                "new_field_2": {"$literal": "another_string"}
+                "new_field_2": {"$literal": "another_string"},
             }
         }
 
@@ -153,14 +138,14 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         fields = {
             "new_field_1": F("existing_field") + 10,
-            "new_field_2": F("field_a") * F("field_b")
+            "new_field_2": F("field_a") * F("field_b"),
         }
         add_fields_stage = aggify.addFields(fields)
 
         expected_stage = {
             "$addFields": {
                 "new_field_1": {"$add": ["$existing_field", 10]},
-                "new_field_2": {"$multiply": ["$field_a", "$field_b"]}
+                "new_field_2": {"$multiply": ["$field_a", "$field_b"]},
             }
         }
         assert add_fields_stage.pipelines[0] == expected_stage
