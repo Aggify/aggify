@@ -1,29 +1,31 @@
-[project]
+[tool.poetry]
 name = "aggify"
 version = "0.1.8"
-authors = [
-  { name="SeYeD.Dev", email="me@seyed.dev" },
-]
+authors = ["SeYeD.Dev <me@seyed.dev>"]
+repository = "https://github.com/Aggify/aggify"
+documentation = "https://github.com/Aggify/aggify/docs"
+
+
 description = "A MongoDB aggregation generator for Mongoengine"
 readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "mongoengine >= 0.27.0",
-]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-]
+packages = [{ include = "aggify" }]
 
-[project.urls]
-Homepage = "https://github.com/Aggify/aggify"
-"Source Code" = "https://github.com/Aggify/aggify"
-"Bug Tracker" = "https://github.com/Aggify/aggify/issues"
-Documentation = "https://github.com/Aggify/aggify/docs"
+[tool.poetry.dependencies]
+python = ">=3.11,<4.0"
+mongoengine = ">= 0.27.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.0"
+pytest-cov = "^4.0.0"
+mypy = "^1.5.1"
+pre-commit = "^3.4.0"
+tox = "^4.11.1"
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.4.2"
+mkdocs-material = "^9.2.7"
+mkdocstrings = { extras = ["python"], version = "^0.23.0" }
 
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

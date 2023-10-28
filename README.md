@@ -56,7 +56,7 @@ class AccountDocument(Document):
     disabled_at = fields.LongField()
     deleted_at = fields.LongField()
     banned_at = fields.LongField()
-    
+
     meta = {
         'collection': 'account',
         'ordering': ['-_id'],
@@ -65,7 +65,7 @@ class AccountDocument(Document):
             'deleted_at', 'disabled_at', 'banned_at'
         ],
     }
-    
+
 class PostDocument(Document):
     owner = fields.ReferenceField('AccountDocument', db_field='owner_id')
     caption = fields.StringField()
@@ -132,7 +132,7 @@ pprint(
 #         [{'$match': {'caption': 'hello'}}, {'$sort': {'_id': -1}}]
 
 pprint(
-    query.addFields({
+    query.add_fields({
         "new_field_1": "some_string",
         "new_field_2": F("existing_field") + 10,
         "new_field_3": F("field_a") * F("field_b")}
@@ -149,4 +149,3 @@ pprint(
 In the sample usage above, you can see how Aggify simplifies the construction of MongoDB aggregation pipelines by allowing you to chain filters, projections, and other operations to build complex queries. The pprint(query.pipelines) line demonstrates how you can inspect the generated aggregation pipeline for debugging or analysis.
 
 For more details and examples, please refer to the documentation and codebase.
-
