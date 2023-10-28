@@ -3,7 +3,7 @@ from typing import Any, Literal, Type
 from mongoengine import Document, EmbeddedDocument
 
 from aggify.compiler import F, Match, Q  # noqa keep
-from aggify.exceptions import AggifyValueError
+from aggify.exceptions import AggifyValueError, AnnotationError
 from aggify.types import QueryParams
 from aggify.utilty import to_mongo_positive_index
 
@@ -77,7 +77,7 @@ class Aggify:
             elif isinstance(expression, F):
                 add_fields_stage["$addFields"][field] = expression.to_dict()
             else:
-                raise ValueError("Invalid field expression")
+                raise AggifyValueError([str, F], type(expression))
 
         self.pipelines.append(add_fields_stage)
         return self
@@ -108,10 +108,42 @@ class Aggify:
 
         return self
 
-    def annotate(self, annotate_name, accumulator, f) -> "Aggify":
-        raise NotImplementedError(
-            "annotate is not implemented in this version of Aggify"
-        )
+    def annotate(self, annotate_name, accumulator, f):
+        try:
+            if (stage := list(self.pipelines[-1].keys())[0]) != "$group":
+                raise AnnotationError(
+                    f"Annotations apply only to $group, not to {stage}."
+                )
+
+        except IndexError as error:
+            raise AnnotationError(
+                "Annotations apply only to $group, you're pipeline is empty."
+            ) from error
+
+        accumulator_dict = {
+            "sum": "$sum",
+            "avg": "$avg",
+            "first": "$first",
+            "last": "$last",
+            "max": "$max",
+            "min": "$min",
+            "push": "$push",
+            "addToSet": "$addToSet",
+            "stdDevPop": "$stdDevPop",
+            "stdDevSamp": "$stdDevSamp",
+        }
+
+        try:
+            acc = accumulator_dict[accumulator]
+        except KeyError as error:
+            raise AnnotationError(f"Invalid accumulator: {accumulator}") from error
+
+        if isinstance(f, F):
+            value = f.to_dict()
+        else:
+            value = f"${f}"
+        self.pipelines[-1]["$group"] |= {annotate_name: {acc: value}}
+        return self
 
     def __match(self, matches: dict[str, Any]):
         """

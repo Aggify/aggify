@@ -12,6 +12,12 @@ class MongoIndexError(AggifyBaseException):
         super().__init__(self.message)
 
 
+class AnnotationError(AggifyBaseException):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
 class AggifyValueError(AggifyBaseException):
     def __init__(self, expecteds: list[Type], result: Type):
         self.message = (

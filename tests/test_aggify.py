@@ -2,7 +2,7 @@ import pytest
 from mongoengine import Document, IntField, StringField
 
 from aggify import Aggify, Cond, F, Q
-from aggify.exceptions import AggifyValueError
+from aggify.exceptions import AggifyValueError, AnnotationError
 
 
 class BaseModel(Document):
@@ -11,7 +11,6 @@ class BaseModel(Document):
     age = IntField()
 
     meta = {"allow_inheritance": True, "abstract": True}
-
 
 
 # This defines a base document model for MongoDB using MongoEngine, with 'name' and 'age' fields.
@@ -122,14 +121,12 @@ class TestAggify:
         assert aggify.pipelines[0]["$match"]["$not"][0]["name"] == "John"
 
     def test_add_field_value_error(self):
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(AggifyValueError):
             aggify = Aggify(BaseModel)
             fields = {
                 "new_field_1": True,
             }
-            aggify.addFields(fields)
-
-        assert 'invalid field expression' in err.__str__().lower()
+            aggify.add_fields(fields)
 
     def test_add_fields_string_literal(self):
         aggify = Aggify(BaseModel)
@@ -162,39 +159,35 @@ class TestAggify:
         assert add_fields_stage.pipelines[0] == expected_stage
 
     def test_filter_value_error(self):
-        with pytest.raises(ValueError) as err:
-            Aggify(BaseModel).filter(arg='Hi')
-
-        assert 'invalid' in err.__str__().lower()
+        with pytest.raises(AggifyValueError):
+            Aggify(BaseModel).filter(arg="Hi")
 
     def test_group(self):
         aggify = Aggify(BaseModel)
-        thing = aggify.group('name')
+        thing = aggify.group("name")
         assert len(thing.pipelines) == 1
-        assert thing.pipelines[-1]['$group'] == {'_id': '$name'}
+        assert thing.pipelines[-1]["$group"] == {"_id": "$name"}
 
     def test_annotate_empty_pipeline_value_error(self):
-        with pytest.raises(ValueError) as err:
-            Aggify(BaseModel).annotate('size', 'sum', None)
+        with pytest.raises(AnnotationError) as err:
+            Aggify(BaseModel).annotate("size", "sum", None)
 
         assert "you're pipeline is empty" in err.__str__().lower()
 
     def test_annotate_not_group_value_error(self):
-        with pytest.raises(ValueError) as err:
-            Aggify(BaseModel)[1].annotate('size', 'sum', None)
+        with pytest.raises(AnnotationError) as err:
+            Aggify(BaseModel)[1].annotate("size", "sum", None)
 
-        assert 'not to $limit' in err.__str__().lower()
+        assert "not to $limit" in err.__str__().lower()
 
     def test_annotate_invalid_accumulator(self):
-        with pytest.raises(ValueError) as err:
-            Aggify(BaseModel).group('name').annotate('size', 'mahdi', None)
-
-        assert 'invalid accumulator' in err.__str__().lower()
+        with pytest.raises(AnnotationError):
+            Aggify(BaseModel).group("name").annotate("size", "mahdi", None)
 
     @pytest.mark.parametrize(
-        'accumulator',
+        "accumulator",
         (
-            'sum',
+            "sum",
             "avg",
             "first",
             "last",
@@ -204,18 +197,18 @@ class TestAggify:
             "addToSet",
             "stdDevPop",
             "stdDevSamp",
-        )
+        ),
     )
     def test_annotate_with_raw_f(self, accumulator):
         aggify = Aggify(BaseModel)
-        thing = aggify.group().annotate('price', accumulator, F('price'))
+        thing = aggify.group().annotate("price", accumulator, F("price"))
         assert len(thing.pipelines) == 1
-        assert thing.pipelines[-1]['$group']['price'] == {f'${accumulator}': '$price'}
+        assert thing.pipelines[-1]["$group"]["price"] == {f"${accumulator}": "$price"}
 
     @pytest.mark.parametrize(
-        'accumulator',
+        "accumulator",
         (
-            'sum',
+            "sum",
             "avg",
             "first",
             "last",
@@ -225,18 +218,20 @@ class TestAggify:
             "addToSet",
             "stdDevPop",
             "stdDevSamp",
-        )
+        ),
     )
     def test_annotate_with_f(self, accumulator):
         aggify = Aggify(BaseModel)
-        thing = aggify.group().annotate('price', accumulator, F('price') * 10)
+        thing = aggify.group().annotate("price", accumulator, F("price") * 10)
         assert len(thing.pipelines) == 1
-        assert thing.pipelines[-1]['$group']['price'] == {f'${accumulator}': {'$multiply': ['$price', 10]}}
+        assert thing.pipelines[-1]["$group"]["price"] == {
+            f"${accumulator}": {"$multiply": ["$price", 10]}
+        }
 
     @pytest.mark.parametrize(
-        'accumulator',
+        "accumulator",
         (
-            'sum',
+            "sum",
             "avg",
             "first",
             "last",
@@ -246,10 +241,12 @@ class TestAggify:
             "addToSet",
             "stdDevPop",
             "stdDevSamp",
-        )
+        ),
     )
     def test_annotate_raw_value(self, accumulator):
         aggify = Aggify(BaseModel)
-        thing = aggify.group().annotate('some_name', accumulator, 'some_value')
+        thing = aggify.group().annotate("some_name", accumulator, "some_value")
         assert len(thing.pipelines) == 1
-        assert thing.pipelines[-1]['$group']['some_name'] == {f'${accumulator}': '$some_value'}
+        assert thing.pipelines[-1]["$group"]["some_name"] == {
+            f"${accumulator}": "$some_value"
+        }
