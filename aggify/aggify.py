@@ -167,7 +167,7 @@ class Aggify:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
             if 'document_type_obj' not in join_field.__dict__ or issubclass(join_field.document_type, EmbeddedDocument):
-                match = self._match([(key, value)])
+                match = self.match([(key, value)])
                 if (match.get("$match")) != {}:
                     self.pipelines.append(match)
             else:
@@ -225,8 +225,11 @@ class Aggify:
         return self
 
     def annotate(self, annotate_name, accumulator, f):
-        if (stage := list(self.pipelines[-1].keys())[0]) != "$group":
-            raise ValueError(f"Annotations apply only to $group, not to {stage}.")
+        try:
+            if (stage := list(self.pipelines[-1].keys())[0]) != "$group":
+                raise ValueError(f"Annotations apply only to $group, not to {stage}.")
+        except IndexError:
+            raise ValueError(f"Annotations apply only to $group, you're pipeline is empty.")
 
         accumulator_dict = {
             "sum": "$sum",
@@ -241,15 +244,17 @@ class Aggify:
             "stdDevSamp": "$stdDevSamp"  # noqa
         }
 
-        acc = accumulator_dict.get(accumulator, None)
-        if not acc:
-            raise ValueError(f"Invalid accumulator: {accumulator}")
+        try:
+            acc = accumulator_dict[accumulator]
+        except KeyError:
+            raise ValueError(f"Invalid accumulator: {accumulator}") from None
 
         if isinstance(f, F):
             value = f.to_dict()
         else:
             value = f"${f}"
         self.pipelines[-1]['$group'] |= {annotate_name: {acc: value}}
+        return self
 
     def order_by(self, field):
         self.pipelines.append({'$sort': {
@@ -296,7 +301,7 @@ class Aggify:
 
 class Q:
     def __init__(self, **conditions):
-        self.conditions = Aggify(None)._match(matches=conditions.items()).get('$match')
+        self.conditions = Aggify(None).match(matches=conditions.items()).get('$match')
 
     def __iter__(self):
         yield '$match', self.conditions
