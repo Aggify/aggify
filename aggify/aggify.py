@@ -41,7 +41,7 @@ class Aggify:
         """
         return {"$unwind": {"path": f"${path}", "preserveNullAndEmptyArrays": preserve}}
 
-    def project(self, **kwargs: QueryParams | dict) -> "Aggify":
+    def project(self, **kwargs: QueryParams) -> "Aggify":
         self.pipelines.append({"$project": kwargs})
         return self
 
