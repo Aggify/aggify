@@ -263,6 +263,29 @@ class Aggify:
         self.pipelines.append(raw_query)
         return self
 
+    def addFields(self, fields):  # noqa
+        """
+        Generates a MongoDB addFields pipeline stage.
+
+        Args:
+            fields: A dictionary of field expressions and values.
+
+        Returns:
+            A MongoDB addFields pipeline stage.
+        """
+        add_fields_stage = {"$addFields": {}}
+
+        for field, expression in fields.items():
+            if isinstance(expression, str):
+                add_fields_stage["$addFields"][field] = {"$literal": expression}
+            elif isinstance(expression, F):
+                add_fields_stage["$addFields"][field] = expression.to_dict()
+            else:
+                raise ValueError("Invalid field expression")
+
+        self.pipelines.append(add_fields_stage)
+        return self
+
     def aggregate(self):
         """
         Returns the aggregated results.

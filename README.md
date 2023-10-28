@@ -44,7 +44,7 @@ pip install aggify
 Here's a code snippet that demonstrates how to use Aggify to construct a MongoDB aggregation pipeline:
 
 ```python
-from aggify import Aggify, Q
+from aggify import Aggify, Q, F
 from mongoengine import Document, fields
 from pprint import pprint
 
@@ -130,6 +130,19 @@ pprint(
 
 # output:
 #         [{'$match': {'caption': 'hello'}}, {'$sort': {'_id': -1}}]
+
+pprint(
+    query.addFields({
+        "new_field_1": "some_string",
+        "new_field_2": F("existing_field") + 10,
+        "new_field_3": F("field_a") * F("field_b")}
+    ).pipelines
+)
+# output :
+#         [{'$addFields': {'new_field_1': {'$literal': 'some_string'},
+#                  'new_field_2': {'$add': ['$existing_field', 10]},
+#                  'new_field_3': {'$multiply': ['$field_a', '$field_b']}}}]
+
 
 ```
 

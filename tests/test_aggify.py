@@ -131,3 +131,36 @@ class TestAggify:
         aggify.filter(~Q(name="John"))
         assert len(aggify.pipelines) == 1
         assert aggify.pipelines[0]["$match"]["$not"][0]["name"] == "John"
+
+    def test_add_fields_string_literal(self):
+        aggify = Aggify(BaseModel)
+        fields = {
+            "new_field_1": "some_string",
+            "new_field_2": "another_string"
+        }
+        add_fields_stage = aggify.addFields(fields)
+
+        expected_stage = {
+            "$addFields": {
+                "new_field_1": {"$literal": "some_string"},
+                "new_field_2": {"$literal": "another_string"}
+            }
+        }
+
+        assert add_fields_stage.pipelines[0] == expected_stage
+
+    def test_add_fields_with_f_expression(self):
+        aggify = Aggify(BaseModel)
+        fields = {
+            "new_field_1": F("existing_field") + 10,
+            "new_field_2": F("field_a") * F("field_b")
+        }
+        add_fields_stage = aggify.addFields(fields)
+
+        expected_stage = {
+            "$addFields": {
+                "new_field_1": {"$add": ["$existing_field", 10]},
+                "new_field_2": {"$multiply": ["$field_a", "$field_b"]}
+            }
+        }
+        assert add_fields_stage.pipelines[0] == expected_stage
