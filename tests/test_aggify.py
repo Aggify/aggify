@@ -133,6 +133,16 @@ class TestAggify:
         assert len(aggify.pipelines) == 1
         assert aggify.pipelines[0]["$match"]["$not"][0]["name"] == "John"
 
+    def test_add_field_value_error(self):
+        with pytest.raises(ValueError) as err:
+            aggify = Aggify(BaseModel)
+            fields = {
+                "new_field_1": True,
+            }
+            aggify.addFields(fields)
+
+        assert 'invalid field expression' in err.__str__().lower()
+
     def test_add_fields_string_literal(self):
         aggify = Aggify(BaseModel)
         fields = {

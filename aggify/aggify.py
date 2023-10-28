@@ -178,7 +178,7 @@ class Aggify:
                 for k, v in self.q.items():
                     if k.split('__')[0] == split_query[0]:
                         skip_list.append(k)
-                        if (match := self._match([(k.replace("__", ".", 1), v)]).get("$match")) != {}:
+                        if (match := self.match([(k.replace("__", ".", 1), v)]).get("$match")) != {}:
                             matches.append(match)
                 self.pipelines.extend([
                     self.lookup(
