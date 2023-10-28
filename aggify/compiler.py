@@ -237,9 +237,7 @@ class Match:
 
     def compile(self, pipelines: list) -> dict[str, dict[str, list]]:
         match_query = {}
-        for _match in self.matches.items():
-            key, value = _match
-
+        for key, value in self.matches.items():
             if "__" not in key:
                 match_query[key] = value
                 continue
