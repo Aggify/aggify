@@ -41,13 +41,13 @@ class PostDocument(Document):
 
 
 @dataclass
-class TestCase:
+class ParameterTestCase:
     compiled_query: Aggify
     expected_query: list
 
 
 cases = [
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument).filter(
             caption__contains="hello", owner__deleted_at=None
         ),
@@ -65,7 +65,7 @@ cases = [
             {"$match": {"owner.deleted_at": None}},
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument)
         .filter(caption__contains="hello")
         .project(caption=1, deleted_at=0),
@@ -74,7 +74,7 @@ cases = [
             {"$project": {"caption": 1, "deleted_at": 0}},
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument).filter(
             (Q(caption__contains=["hello"]) | Q(location__contains="test"))
             & Q(deleted_at=None)
@@ -100,15 +100,15 @@ cases = [
             }
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument).filter(caption="hello")[3:10],
         expected_query=[{"$match": {"caption": "hello"}}, {"$skip": 3}, {"$limit": 7}],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument).filter(caption="hello").order_by("-_id"),
         expected_query=[{"$match": {"caption": "hello"}}, {"$sort": {"_id": -1}}],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).add_fields(
                 {
@@ -128,7 +128,7 @@ cases = [
             }
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).lookup(
                 AccountDocument, query=[  # noqa
@@ -146,7 +146,7 @@ cases = [
                                                                               'seyed']}]}}}]}}
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).lookup(
                 AccountDocument, query=[  # noqa
@@ -165,7 +165,7 @@ cases = [
             {'$match': {'posts': {'$ne': []}}}
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).lookup(
                 AccountDocument, query=[  # noqa
@@ -188,7 +188,7 @@ cases = [
 
 
 @pytest.mark.parametrize("case", cases)
-def test_query_compiler(case: TestCase):
+def test_query_compiler(case: ParameterTestCase):
     print(str(case.compiled_query))
     print(case.compiled_query.pipelines)
     print(case.expected_query)
