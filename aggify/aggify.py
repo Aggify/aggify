@@ -3,7 +3,7 @@ from typing import Any, Literal, Type
 from mongoengine import Document, EmbeddedDocument, fields
 
 from aggify.compiler import F, Match, Q  # noqa keep
-from aggify.exceptions import AggifyValueError, AnnotationError, InvalidField
+from aggify.exceptions import AggifyValueError, AnnotationError
 from aggify.types import QueryParams
 from aggify.utilty import to_mongo_positive_index, check_fields_exist, replace_values_recursive, convert_match_query
 
@@ -130,8 +130,16 @@ class Aggify:
             "push": "$push",
             "addToSet": "$addToSet",
             "stdDevPop": "$stdDevPop",
-            "stdDevSamp": "$stdDevSamp",
+            "stdDevSamp": "$stdDevSamp"
         }
+
+        # Determine the data type based on the accumulator
+        if accumulator in ["sum", "avg", "stdDevPop", "stdDevSamp"]:
+            field_type = fields.FloatField()
+        elif accumulator in ["push", "addToSet"]:
+            field_type = fields.ListField()
+        else:
+            field_type = fields.StringField()
 
         try:
             acc = accumulator_dict[accumulator]
@@ -143,6 +151,7 @@ class Aggify:
         else:
             value = f"${f}"
         self.pipelines[-1]["$group"] |= {annotate_name: {acc: value}}
+        self.base_model._fields[annotate_name] = field_type  # noqa
         return self
 
     def __match(self, matches: dict[str, Any]):
