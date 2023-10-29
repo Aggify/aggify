@@ -37,7 +37,7 @@ class Operators:
 
     def compile_match(self, operator: str, value, field: str):
         # TODO: i don't like this, we can refactor it later.
-        # I think there should be easier way to inject comparision operators to be defined per each
+        # I think there should be easier way to inject comparison operators to be defined per each
         # like map an existing template to each operator
 
         if operator in ["exact", "iexact"]:

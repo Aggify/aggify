@@ -1,11 +1,11 @@
 from typing import Any, Literal, Type
 
-from mongoengine import Document, EmbeddedDocument
+from mongoengine import Document, EmbeddedDocument, fields
 
 from aggify.compiler import F, Match, Q  # noqa keep
-from aggify.exceptions import AggifyValueError, AnnotationError
+from aggify.exceptions import AggifyValueError, AnnotationError, InvalidField
 from aggify.types import QueryParams
-from aggify.utilty import to_mongo_positive_index
+from aggify.utilty import to_mongo_positive_index, check_fields_exist, replace_values_recursive, convert_match_query
 
 
 class Aggify:
@@ -24,7 +24,7 @@ class Aggify:
 
     @staticmethod
     def unwind(
-        path: str, preserve: bool = True
+            path: str, preserve: bool = True
     ) -> dict[
         Literal["$unwind"],
         dict[Literal["path", "preserveNullAndEmptyArrays"], str | bool],
@@ -159,7 +159,7 @@ class Aggify:
 
     @staticmethod
     def __lookup(
-        from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
+            from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
     ) -> dict[str, dict[str, str]]:
         """
         Generates a MongoDB lookup pipeline stage.
@@ -198,7 +198,7 @@ class Aggify:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
             if "document_type_obj" not in join_field.__dict__ or issubclass(
-                join_field.document_type, EmbeddedDocument
+                    join_field.document_type, EmbeddedDocument
             ):
                 match = self.__match({key: value})
                 if (match.get("$match")) != {}:
@@ -260,4 +260,56 @@ class Aggify:
         index = to_mongo_positive_index(index)
         self.pipelines.append({"$skip": int(index.start)})
         self.pipelines.append({"$limit": int(index.stop - index.start)})
+        return self
+
+    def lookup(self, from_collection: Document, let: list[str], query: list[Q], as_name: str) -> "Aggify":
+        """
+        Generates a MongoDB lookup pipeline stage.
+
+        Args:
+            from_collection (Document): The name of the collection to lookup.
+            let (list): The local field(s) to join on.
+            query (list[Q]): List of desired queries with Q function.
+            as_name (str): The name of the new field to create.
+
+        Returns:
+            Aggify: A MongoDB lookup pipeline stage.
+        """
+        check_fields_exist(self.base_model, let)  # noqa
+
+        let_dict = {field: f"${self.base_model._fields[field].db_field}" for field in let}  # noqa
+        from_collection = from_collection._meta.get('collection')  # noqa
+
+        lookup_stages = []
+
+        for q in query:
+            # Construct the match stage for each query
+            if isinstance(q, Q):
+                replaced_values = replace_values_recursive(convert_match_query(dict(q)),  # noqa
+                                                           {field: f'$${field}' for field in let})
+                match_stage = {
+                    "$match": {
+                        "$expr": replaced_values.get('$match')
+                    }
+                }
+                lookup_stages.append(match_stage)
+            elif isinstance(q, Aggify):
+                lookup_stages.extend(replace_values_recursive(convert_match_query(q.pipelines),  # noqa
+                                                              {field: f'$${field}' for field in let}))
+
+        # Append the lookup stage with multiple match stages to the pipeline
+        lookup_stage = {
+            "$lookup": {
+                "from": from_collection,
+                "let": let_dict,
+                "pipeline": lookup_stages,  # List of match stages
+                "as": as_name
+            }
+        }
+
+        self.pipelines.append(lookup_stage)
+
+        # Add this new field to base model fields, which we can use it in the next stages.
+        self.base_model._fields[as_name] = fields.StringField()  # noqa
+
         return self
