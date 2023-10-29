@@ -26,7 +26,6 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         thing = aggify[0:10]
         assert isinstance(thing, Aggify)
-        print(thing.pipelines)
         assert thing.pipelines[-1]["$limit"] == 10
         assert thing.pipelines[-2]["$skip"] == 0
 
@@ -40,7 +39,6 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         aggify.filter(age__gte=30).project(name=1, age=1)
         assert len(aggify.pipelines) == 2
-        print(type(aggify.pipelines[1]))
         assert aggify.pipelines[1]["$project"] == {"name": 1, "age": 1}
 
     def test_filtering_and_ordering(self):
