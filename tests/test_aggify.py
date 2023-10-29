@@ -268,3 +268,16 @@ class TestAggify:
         aggify.out("coll")
         with pytest.raises(OutStageError):
             getattr(Aggify, method)(aggify, *args)
+
+    def test_out_db_none(self):
+        aggify = Aggify(BaseModel)
+        aggify.out("collection")
+        assert len(aggify.pipelines) == 1
+        assert aggify.pipelines[-1]["$out"] == "collection"
+
+    def test_out(self):
+        aggify = Aggify(BaseModel)
+        aggify.out("collection", "db_name")
+        assert len(aggify.pipelines) == 1
+        assert aggify.pipelines[-1]["$out"]["db"] == "db_name"
+        assert aggify.pipelines[-1]["$out"]["coll"] == "collection"
