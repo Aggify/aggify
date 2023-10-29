@@ -24,7 +24,7 @@ def last_out_stage_check(method):
     @functools.wraps(method)
     def decorator(*args, **kwargs):
         try:
-            if is_last_out := bool(args[0].pipelines[-1].get("out")):
+            if last_is_out := bool(args[0].pipelines[-1].get("$out")):
                 raise OutStageError(method.__name__)
         except IndexError:
             return method(*args, **kwargs)
@@ -147,9 +147,9 @@ class Aggify:
         from: https://www.mongodb.com/docs/manual/reference/operator/aggregation/out/
         """
         if db is None:
-            stage = {'$out': coll}
+            stage = {"$out": coll}
         else:
-            stage = {'$out': {'db': db, 'coll': coll}}
+            stage = {"$out": {"db": db, "coll": coll}}
         self.pipelines.append(stage)
         return self
 

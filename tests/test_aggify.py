@@ -2,7 +2,7 @@ import pytest
 from mongoengine import Document, IntField, StringField
 
 from aggify import Aggify, Cond, F, Q
-from aggify.exceptions import AggifyValueError, AnnotationError
+from aggify.exceptions import AggifyValueError, AnnotationError, OutStageError
 
 
 class BaseModel(Document):
@@ -248,3 +248,23 @@ class TestAggify:
         assert thing.pipelines[-1]["$group"]["some_name"] == {
             f"${accumulator}": "$some_value"
         }
+
+    def test_out_with_project_stage_error(self):
+        with pytest.raises(OutStageError):
+            Aggify(BaseModel).out("Hi").project(age=1)
+
+    @pytest.mark.parametrize(
+        ("method", "args"),
+        (
+            ("group", ("_id",)),
+            ("order_by", ("field",)),
+            ("raw", ({"$query": "query"},)),
+            ("add_fields", ({"$field": "value"},)),
+            ("filter", (Q(age=20),)),
+        ),
+    )
+    def test_out_stage_error(self, method, args):
+        aggify = Aggify(BaseModel)
+        aggify.out("coll")
+        with pytest.raises(OutStageError):
+            getattr(Aggify, method)(aggify, *args)
