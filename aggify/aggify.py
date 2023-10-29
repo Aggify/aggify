@@ -128,7 +128,7 @@ class Aggify:
 
               For a sharded cluster, the specified output database must already exist.
 
-        db is None:
+        if db is None:
           { $out: "<output-collection>" } // Output collection is in the same database
 
         Notes:
@@ -144,9 +144,14 @@ class Aggify:
             you must first delete and then re-create the search index.
             Consider using $merge instead.
 
-        from docs: https://www.mongodb.com/docs/manual/reference/operator/aggregation/out/
+        from: https://www.mongodb.com/docs/manual/reference/operator/aggregation/out/
         """
-        pass
+        if db is None:
+            stage = {'$out': coll}
+        else:
+            stage = {'$out': {'db': db, 'coll': coll}}
+        self.pipelines.append(stage)
+        return self
 
     def __to_aggregate(self, query: dict[str, Any]) -> None:
         """
