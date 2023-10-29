@@ -34,3 +34,9 @@ class InvalidOperator(AggifyBaseException):
     def __init__(self, operator: str):
         self.message = f"Operator {operator} does not exists, please refer to documentation to see all supported operators."
         super().__init__(self.message)
+
+
+class InvalidField(AggifyBaseException):
+    def __init__(self, field: str):
+        self.message = f"Field {field} does not exists."
+        super().__init__(self.message)
