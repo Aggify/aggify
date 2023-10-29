@@ -14,6 +14,8 @@ Aggify is a Python library for generating MongoDB aggregation pipelines, designe
 
 - [ ] `$addFields`: Adds new fields to the documents in the pipeline.
 - [ ] `$replaceRoot`: Replaces the document structure with a new one.
+- [ ] `$replaceWith`: Replaces the document structure with a new one (new).
+- [ ] `$mergeObjects`: Combines multiple documents into a single document.
 - [ ] `$project` (with expressions): Allows you to use expressions to reshape and calculate values.
 - [ ] `$redact`: Controls document inclusion during the aggregation pipeline.
 - [ ] `$out`: Writes the result of the aggregation pipeline to a new collection.

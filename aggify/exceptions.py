@@ -19,12 +19,12 @@ class AnnotationError(AggifyBaseException):
 
 
 class AggifyValueError(AggifyBaseException):
-    def __init__(self, expecteds: list[Type], result: Type):
+    def __init__(self, expects: list[Type], result: Type):
         self.message = (
-            f"Input is not correctly passed, expected either of {[expected for expected in expecteds]}"
+            f"Input is not correctly passed, expected either of {[expected for expected in expects]}"
             f"but got {result}"
         )
-        self.expecteds = expecteds
+        self.expects = expects
         self.result = result
 
         super().__init__(self.message)
