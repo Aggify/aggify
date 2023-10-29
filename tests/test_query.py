@@ -232,7 +232,7 @@ cases = [
             {"$match": {"posts": {"$ne": []}}},
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).replace_root(embedded_field='stat')
         ),
@@ -240,7 +240,7 @@ cases = [
             {'$replaceRoot': {'$newRoot': '$stat'}}
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).replace_with(embedded_field='stat')
         ),
@@ -248,7 +248,7 @@ cases = [
             {'$replaceWith': '$stat'}
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).replace_with(embedded_field='stat', merge={
                 "like_count": 0,
@@ -263,7 +263,7 @@ cases = [
                                                 '$stat']}}
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).replace_root(embedded_field='stat', merge={
                 "like_count": 0,

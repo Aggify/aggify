@@ -323,52 +323,6 @@ class Aggify:
             }
         }
 
-    def __to_aggregate(self, query: dict[str, Any]) -> None:
-        """
-        Builds the pipelines list based on the query parameters.
-        """
-        skip_list = []
-
-        for key, value in query.items():
-            if key in skip_list:
-                continue
-
-            split_query = key.split("__")
-            join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore # noqa
-            if not join_field:
-                raise ValueError(f"Invalid field: {split_query[0]}")
-            # This is a nested query.
-            if "document_type_obj" not in join_field.__dict__ or issubclass(
-                    join_field.document_type, EmbeddedDocument
-            ):
-                match = self.__match({key: value})
-                if (match.get("$match")) != {}:
-                    self.pipelines.append(match)
-            else:
-                from_collection = join_field.document_type._meta["collection"]  # noqa
-                local_field = join_field.db_field
-                as_name = join_field.name
-                matches = []
-                for k, v in query.items():
-                    if k.split("__")[0] == split_query[0]:
-                        skip_list.append(k)
-                        _key = k.replace("__", ".", 1)
-                        match = self.__match({_key: v}).get("$match")
-                        if match != {}:
-                            matches.append(match)
-
-                self.pipelines.extend(
-                    [
-                        self.__lookup(
-                            from_collection=from_collection,
-                            local_field=local_field,
-                            as_name=as_name,
-                        ),
-                        self.unwind(as_name),  # type: ignore
-                        *[{"$match": match} for match in matches],
-                    ]
-                )
-                
     def __combine_sequential_matches(self) -> list[dict[str, dict | Any]]:
         merged_pipeline = []
         match_stage = None
