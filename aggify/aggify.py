@@ -3,7 +3,7 @@ from typing import Any, Literal, Type
 from mongoengine import Document, EmbeddedDocument, fields
 
 from aggify.compiler import F, Match, Q  # noqa keep
-from aggify.exceptions import AggifyValueError, AnnotationError
+from aggify.exceptions import AggifyValueError, AnnotationError, InvalidField, InvalidEmbeddedField
 from aggify.types import QueryParams
 from aggify.utilty import to_mongo_positive_index, check_fields_exist, replace_values_recursive, convert_match_query
 
@@ -203,7 +203,7 @@ class Aggify:
                 continue
 
             split_query = key.split("__")
-            join_field = self.base_model._fields.get(split_query[0])  # type: ignore
+            join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore # noqa
             if not join_field:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
@@ -321,5 +321,115 @@ class Aggify:
 
         # Add this new field to base model fields, which we can use it in the next stages.
         self.base_model._fields[as_name] = fields.StringField()  # noqa
+
+        return self
+
+    @staticmethod
+    def get_model_field(model: Document, field: str) -> fields:
+        """
+        Get the field definition of a specified field in a MongoDB model.
+
+        Args:
+            model (Document): The MongoDB model.
+            field (str): The name of the field to retrieve.
+
+        Returns:
+            fields.BaseField: The field definition.
+
+        Raises:
+            InvalidField: If the specified field does not exist in the model.
+        """
+        model_field = model._fields.get(field, None)  # noqa
+        if not model_field:
+            raise InvalidField(field=field)
+        return model_field
+
+    def _replace_base(self, embedded_field) -> str:
+        """
+           Replace the root document with a specified embedded field.
+
+           Args:
+               embedded_field (str): The name of the embedded field to use as the new root.
+
+           Returns:
+               str: The MongoDB aggregation expression for replacing the root.
+
+           Raises:
+               InvalidEmbeddedField: If the specified embedded field is not found or is not of the correct type.
+        """
+        model_field = self.get_model_field(self.base_model, embedded_field)  # noqa
+
+        if not hasattr(model_field, 'document_type') or not issubclass(model_field.document_type, EmbeddedDocument):
+            raise InvalidEmbeddedField(field=embedded_field)
+
+        return f"${model_field.db_field}"
+
+    def replace_root(self, *, embedded_field: str, merge: dict | None = None) -> "Aggify":
+        """
+        Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
+
+        Args:
+            embedded_field (str): The name of the embedded field to use as the new root.
+            merge (dict | None, optional): A dictionary for merging with the new root. Default is None.
+
+        Returns:
+            Aggify: The modified Aggify instance.
+
+        Usage:
+            Aggify().replace_root(embedded_field="myEmbeddedField")
+            Aggify().replace_root(embedded_field="myEmbeddedField", merge={"child_field": default_value_if_not_exists})
+        """
+        name = self._replace_base(embedded_field)
+
+        if not merge:
+            new_root = {
+                "$replaceRoot": {
+                    "$newRoot": name
+                }
+            }
+        else:
+            new_root = {
+                '$replaceRoot': {
+                    'newRoot': {
+                        '$mergeObjects': [
+                            merge, name
+                        ]
+                    }
+                }
+            }
+        self.pipelines.append(new_root)
+
+        return self
+
+    def replace_with(self, *, embedded_field: str, merge: dict | None = None) -> "Aggify":
+        """
+        Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
+
+        Args:
+            embedded_field (str): The name of the embedded field to use as the new root.
+            merge (dict | None, optional): A dictionary for merging with the new root. Default is None.
+
+        Returns:
+            Aggify: The modified Aggify instance.
+
+        Usage:
+            Aggify().replace_root(embedded_field="myEmbeddedField")
+            Aggify().replace_root(embedded_field="myEmbeddedField", merge={"child_field": default_value_if_not_exists})
+        """
+        name = self._replace_base(embedded_field)
+
+        if not merge:
+            new_root = {
+                "$replaceWith": name
+            }
+        else:
+            new_root = {
+                '$replaceWith': {
+                    '$mergeObjects': [
+                        merge, name
+                    ]
+                }
+            }
+        self.pipelines.append(new_root)
 
         return self

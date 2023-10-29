@@ -40,3 +40,9 @@ class InvalidField(AggifyBaseException):
     def __init__(self, field: str):
         self.message = f"Field {field} does not exists."
         super().__init__(self.message)
+
+
+class InvalidEmbeddedField(AggifyBaseException):
+    def __init__(self, field: str):
+        self.message = f"Field {field} is not embedded."
+        super().__init__(self.message)
