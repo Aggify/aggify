@@ -144,6 +144,22 @@ pprint(
 #                  'new_field_3': {'$multiply': ['$field_a', '$field_b']}}}]
 
 
+pprint(
+    query.lookup(from_collection=AccountDocument, let=['owner'],
+                 query=[
+                     Q(_id__exact='owner') & Q(username__ne='seyed'),
+                 ],
+                 as_name="posts").filter(posts__ne=[]).pipelines
+)
+# output: 
+#         [{'$lookup': {'as': 'posts',
+#               'from': 'account',
+#               'let': {'owner': '$owner_id'},
+#               'pipeline': [{'$match': {'$expr': {'$and': [{'$eq': ['$_id',
+#                                                                    '$$owner']},
+#                                                           {'$ne': ['$username',
+#                                                                    'seyed']}]}}}]}},
+#  {'$match': {'posts': {'$ne': []}}}]
 ```
 
 In the sample usage above, you can see how Aggify simplifies the construction of MongoDB aggregation pipelines by allowing you to chain filters, projections, and other operations to build complex queries. The pprint(query.pipelines) line demonstrates how you can inspect the generated aggregation pipeline for debugging or analysis.
