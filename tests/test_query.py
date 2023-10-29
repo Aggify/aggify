@@ -131,57 +131,96 @@ cases = [
     ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).lookup(
-                AccountDocument, query=[  # noqa
-                    Q(_id__ne='owner') & Q(username__ne='seyed'),
-                ], let=['owner'], as_name='posts'
+                AccountDocument,
+                query=[  # noqa
+                    Q(_id__ne="owner") & Q(username__ne="seyed"),
+                ],
+                let=["owner"],
+                as_name="posts",
             )
         ),
         expected_query=[
-            {'$lookup': {'as': 'posts',
-                         'from': 'account',
-                         'let': {'owner': '$owner_id'},
-                         'pipeline': [{'$match': {'$expr': {'$and': [{'$ne': ['$_id',
-                                                                              '$$owner']},
-                                                                     {'$ne': ['$username',
-                                                                              'seyed']}]}}}]}}
+            {
+                "$lookup": {
+                    "as": "posts",
+                    "from": "account",
+                    "let": {"owner": "$owner_id"},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$ne": ["$_id", "$$owner"]},
+                                        {"$ne": ["$username", "seyed"]},
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                }
+            }
         ],
     ),
     ParameterTestCase(
         compiled_query=(
-            Aggify(PostDocument).lookup(
-                AccountDocument, query=[  # noqa
-                    Q(_id__ne='owner') & Q(username__ne='seyed'),
-                ], let=['owner'], as_name='posts'
-            ).filter(posts__ne=[])
+            Aggify(PostDocument)
+            .lookup(
+                AccountDocument,
+                query=[  # noqa
+                    Q(_id__ne="owner") & Q(username__ne="seyed"),
+                ],
+                let=["owner"],
+                as_name="posts",
+            )
+            .filter(posts__ne=[])
         ),
         expected_query=[
-            {'$lookup': {'as': 'posts',
-                         'from': 'account',
-                         'let': {'owner': '$owner_id'},
-                         'pipeline': [{'$match': {'$expr': {'$and': [{'$ne': ['$_id',
-                                                                              '$$owner']},
-                                                                     {'$ne': ['$username',
-                                                                              'seyed']}]}}}]}},
-            {'$match': {'posts': {'$ne': []}}}
+            {
+                "$lookup": {
+                    "as": "posts",
+                    "from": "account",
+                    "let": {"owner": "$owner_id"},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$ne": ["$_id", "$$owner"]},
+                                        {"$ne": ["$username", "seyed"]},
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                }
+            },
+            {"$match": {"posts": {"$ne": []}}},
         ],
     ),
     ParameterTestCase(
         compiled_query=(
-            Aggify(PostDocument).lookup(
-                AccountDocument, query=[  # noqa
-                    Q(_id__exact='owner'),
-                    Q(username__exact='caption')
-                ], let=['owner', 'caption'], as_name='posts'
-            ).filter(posts__ne=[])
+            Aggify(PostDocument)
+            .lookup(
+                AccountDocument,
+                query=[Q(_id__exact="owner"), Q(username__exact="caption")],  # noqa
+                let=["owner", "caption"],
+                as_name="posts",
+            )
+            .filter(posts__ne=[])
         ),
         expected_query=[
-            {'$lookup': {'as': 'posts',
-                         'from': 'account',
-                         'let': {'caption': '$caption', 'owner': '$owner_id'},
-                         'pipeline': [{'$match': {'$expr': {'$eq': ['$_id', '$$owner']}}},
-                                      {'$match': {'$expr': {'$eq': ['$username',
-                                                                    '$$caption']}}}]}},
-            {'$match': {'posts': {'$ne': []}}}
+            {
+                "$lookup": {
+                    "as": "posts",
+                    "from": "account",
+                    "let": {"caption": "$caption", "owner": "$owner_id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$owner"]}}},
+                        {"$match": {"$expr": {"$eq": ["$username", "$$caption"]}}},
+                    ],
+                }
+            },
+            {"$match": {"posts": {"$ne": []}}},
         ],
     ),
 ]

@@ -16,6 +16,7 @@ class InvalidPipelineStageError(AggifyBaseException):
 
     Subclass and customise for the raised exception in the methods
     """
+
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
@@ -27,7 +28,7 @@ class AnnotationError(InvalidPipelineStageError):
 
 class OutStageError(InvalidPipelineStageError):
     def __init__(self, stage):
-        self.message = f'You cannot add a {self!r} pipeline after $out stage!'
+        self.message = f"You cannot add a {self!r} pipeline after $out stage!"
         super().__init__(self.message)
 
 

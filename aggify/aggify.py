@@ -6,7 +6,12 @@ from mongoengine import Document, EmbeddedDocument, fields
 from aggify.compiler import F, Match, Q  # noqa keep
 from aggify.exceptions import AggifyValueError, AnnotationError, OutStageError
 from aggify.types import QueryParams
-from aggify.utilty import to_mongo_positive_index, check_fields_exist, replace_values_recursive, convert_match_query
+from aggify.utilty import (
+    to_mongo_positive_index,
+    check_fields_exist,
+    replace_values_recursive,
+    convert_match_query,
+)
 
 
 def last_out_stage_check(method):
@@ -15,15 +20,17 @@ def last_out_stage_check(method):
     This decorator check if the last stage is $out or not
     MongoDB does not allow adding aggregation pipeline stage after $out stage
     """
+
     @functools.wraps(method)
     def decorator(*args, **kwargs):
         try:
-            if is_last_out := bool(args[0].pipelines[-1].get('out')):
+            if is_last_out := bool(args[0].pipelines[-1].get("out")):
                 raise OutStageError(method.__name__)
         except IndexError:
             return method(*args, **kwargs)
         else:
             return method(*args, **kwargs)
+
     return decorator
 
 
@@ -105,6 +112,42 @@ class Aggify:
 
         return self
 
+    def out(self, coll: str, db: str | None = None) -> "Aggify":
+        """Write the documents returned by the aggregation pipeline into specified collection.
+
+        Starting in MongoDB 4.4, you can specify the output database.
+        The $out stage must be the last stage in the pipeline.
+        The $out operator lets the aggregation framework return result sets of any size.
+
+
+        Arguments:
+            coll: The output collection name.
+            db: The output database name.
+              For a replica set or a standalone, if the output database does not exist,
+              $out also creates the database.
+
+              For a sharded cluster, the specified output database must already exist.
+
+        db is None:
+          { $out: "<output-collection>" } // Output collection is in the same database
+
+        Notes:
+            $out replaces the specified collection if it exists.
+
+            You cannot specify a sharded collection as the output collection.
+            The input collection for a pipeline can be sharded.
+            To output to a sharded collection, see $merge.
+
+            The $out operator cannot write results to a capped collection.
+
+            If you modify a collection with an Atlas Search index,
+            you must first delete and then re-create the search index.
+            Consider using $merge instead.
+
+        from docs: https://www.mongodb.com/docs/manual/reference/operator/aggregation/out/
+        """
+        pass
+
     def __to_aggregate(self, query: dict[str, Any]) -> None:
         """
         Builds the pipelines list based on the query parameters.
@@ -121,7 +164,7 @@ class Aggify:
                 raise ValueError(f"Invalid field: {split_query[0]}")
             # This is a nested query.
             if "document_type_obj" not in join_field.__dict__ or issubclass(
-                    join_field.document_type, EmbeddedDocument
+                join_field.document_type, EmbeddedDocument
             ):
                 match = self.__match({key: value})
                 if (match.get("$match")) != {}:
@@ -165,7 +208,7 @@ class Aggify:
 
     @staticmethod
     def unwind(
-            path: str, preserve: bool = True
+        path: str, preserve: bool = True
     ) -> dict[
         Literal["$unwind"],
         dict[Literal["path", "preserveNullAndEmptyArrays"], str | bool],
@@ -242,7 +285,7 @@ class Aggify:
 
     @staticmethod
     def __lookup(
-            from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
+        from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
     ) -> dict[str, dict[str, str]]:
         """
         Generates a MongoDB lookup pipeline stage.
@@ -287,7 +330,9 @@ class Aggify:
 
         return merged_pipeline
 
-    def lookup(self, from_collection: Document, let: list[str], query: list[Q], as_name: str) -> "Aggify":
+    def lookup(
+        self, from_collection: Document, let: list[str], query: list[Q], as_name: str
+    ) -> "Aggify":
         """
         Generates a MongoDB lookup pipeline stage.
 
@@ -302,25 +347,29 @@ class Aggify:
         """
         check_fields_exist(self.base_model, let)  # noqa
 
-        let_dict = {field: f"${self.base_model._fields[field].db_field}" for field in let}  # noqa
-        from_collection = from_collection._meta.get('collection')  # noqa
+        let_dict = {
+            field: f"${self.base_model._fields[field].db_field}" for field in let
+        }  # noqa
+        from_collection = from_collection._meta.get("collection")  # noqa
 
         lookup_stages = []
 
         for q in query:
             # Construct the match stage for each query
             if isinstance(q, Q):
-                replaced_values = replace_values_recursive(convert_match_query(dict(q)),  # noqa
-                                                           {field: f'$${field}' for field in let})
-                match_stage = {
-                    "$match": {
-                        "$expr": replaced_values.get('$match')
-                    }
-                }
+                replaced_values = replace_values_recursive(
+                    convert_match_query(dict(q)),  # noqa
+                    {field: f"$${field}" for field in let},
+                )
+                match_stage = {"$match": {"$expr": replaced_values.get("$match")}}
                 lookup_stages.append(match_stage)
             elif isinstance(q, Aggify):
-                lookup_stages.extend(replace_values_recursive(convert_match_query(q.pipelines),  # noqa
-                                                              {field: f'$${field}' for field in let}))
+                lookup_stages.extend(
+                    replace_values_recursive(
+                        convert_match_query(q.pipelines),  # noqa
+                        {field: f"$${field}" for field in let},
+                    )
+                )
 
         # Append the lookup stage with multiple match stages to the pipeline
         lookup_stage = {
@@ -328,7 +377,7 @@ class Aggify:
                 "from": from_collection,
                 "let": let_dict,
                 "pipeline": lookup_stages,  # List of match stages
-                "as": as_name
+                "as": as_name,
             }
         }
 
