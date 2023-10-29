@@ -29,8 +29,16 @@ class AccountDocument(Document):
     }
 
 
+class PostStat(fields.EmbeddedDocument):
+    like_count = fields.IntField(default=0)
+    view_count = fields.IntField(default=0)
+    comment_count = fields.IntField(default=0)
+
+    meta = {'allow_inheritance': True}
+
+
 class PostDocument(Document):
-    owner = fields.ReferenceField("AccountDocument", db_field="owner_id")
+    owner = fields.ReferenceField('AccountDocument', db_field='owner_id')
     caption = fields.StringField()
     location = fields.StringField()
     comment_disabled = fields.BooleanField()
@@ -38,6 +46,7 @@ class PostDocument(Document):
     hashtags = fields.ListField()
     archived_at = fields.LongField()
     deleted_at = fields.LongField()
+    stat = fields.EmbeddedDocumentField(PostStat)
 
 
 @dataclass
@@ -221,6 +230,52 @@ cases = [
                 }
             },
             {"$match": {"posts": {"$ne": []}}},
+        ],
+    ),
+    TestCase(
+        compiled_query=(
+            Aggify(PostDocument).replace_root(embedded_field='stat')
+        ),
+        expected_query=[
+            {'$replaceRoot': {'$newRoot': '$stat'}}
+        ],
+    ),
+    TestCase(
+        compiled_query=(
+            Aggify(PostDocument).replace_with(embedded_field='stat')
+        ),
+        expected_query=[
+            {'$replaceWith': '$stat'}
+        ],
+    ),
+    TestCase(
+        compiled_query=(
+            Aggify(PostDocument).replace_with(embedded_field='stat', merge={
+                "like_count": 0,
+                "view_count": 0,
+                "comment_count": 0
+            })
+        ),
+        expected_query=[
+            {'$replaceWith': {'$mergeObjects': [{'comment_count': 0,
+                                                 'like_count': 0,
+                                                 'view_count': 0},
+                                                '$stat']}}
+        ],
+    ),
+    TestCase(
+        compiled_query=(
+            Aggify(PostDocument).replace_root(embedded_field='stat', merge={
+                "like_count": 0,
+                "view_count": 0,
+                "comment_count": 0
+            })
+        ),
+        expected_query=[
+            {'$replaceRoot': {"newRoot": {'$mergeObjects': [{'comment_count': 0,
+                                                             'like_count': 0,
+                                                             'view_count': 0},
+                                                            '$stat']}}}
         ],
     ),
 ]

@@ -33,6 +33,7 @@ class OutStageError(InvalidPipelineStageError):
 
 
 class AggifyValueError(AggifyBaseException):
+
     def __init__(self, expected_list: list[Type], result: Type):
         self.message = (
             f"Input is not correctly passed, expected either of {[expected for expected in expected_list]}"
@@ -40,7 +41,6 @@ class AggifyValueError(AggifyBaseException):
         )
         self.expecteds = expected_list
         self.result = result
-
         super().__init__(self.message)
 
 
@@ -55,6 +55,7 @@ class InvalidField(AggifyBaseException):
         self.message = f"Field {field} does not exists."
         super().__init__(self.message)
 
-
-class _:
-    pass
+class InvalidEmbeddedField(AggifyBaseException):
+    def __init__(self, field: str):
+        self.message = f"Field {field} is not embedded."
+        super().__init__(self.message)

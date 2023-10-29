@@ -4,7 +4,7 @@ from typing import Any, Literal, Type
 from mongoengine import Document, EmbeddedDocument, fields
 
 from aggify.compiler import F, Match, Q  # noqa keep
-from aggify.exceptions import AggifyValueError, AnnotationError, OutStageError
+from aggify.exceptions import AggifyValueError, AnnotationError, InvalidField, InvalidEmbeddedField, OutStageError
 from aggify.types import QueryParams
 from aggify.utilty import (
     to_mongo_positive_index,
@@ -262,7 +262,16 @@ class Aggify:
             "addToSet": "$addToSet",
             "stdDevPop": "$stdDevPop",
             "stdDevSamp": "$stdDevSamp",
+            "merge": "$mergeObjects",
         }
+
+        # Determine the data type based on the accumulator
+        if accumulator in ["sum", "avg", "stdDevPop", "stdDevSamp"]:
+            field_type = fields.FloatField()
+        elif accumulator in ["push", "addToSet"]:
+            field_type = fields.ListField()
+        else:
+            field_type = fields.StringField()
 
         try:
             acc = accumulator_dict[accumulator]
@@ -274,6 +283,7 @@ class Aggify:
         else:
             value = f"${f}"
         self.pipelines[-1]["$group"] |= {annotate_name: {acc: value}}
+        self.base_model._fields[annotate_name] = field_type  # noqa
         return self
 
     def __match(self, matches: dict[str, Any]):
@@ -313,6 +323,52 @@ class Aggify:
             }
         }
 
+    def __to_aggregate(self, query: dict[str, Any]) -> None:
+        """
+        Builds the pipelines list based on the query parameters.
+        """
+        skip_list = []
+
+        for key, value in query.items():
+            if key in skip_list:
+                continue
+
+            split_query = key.split("__")
+            join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore # noqa
+            if not join_field:
+                raise ValueError(f"Invalid field: {split_query[0]}")
+            # This is a nested query.
+            if "document_type_obj" not in join_field.__dict__ or issubclass(
+                    join_field.document_type, EmbeddedDocument
+            ):
+                match = self.__match({key: value})
+                if (match.get("$match")) != {}:
+                    self.pipelines.append(match)
+            else:
+                from_collection = join_field.document_type._meta["collection"]  # noqa
+                local_field = join_field.db_field
+                as_name = join_field.name
+                matches = []
+                for k, v in query.items():
+                    if k.split("__")[0] == split_query[0]:
+                        skip_list.append(k)
+                        _key = k.replace("__", ".", 1)
+                        match = self.__match({_key: v}).get("$match")
+                        if match != {}:
+                            matches.append(match)
+
+                self.pipelines.extend(
+                    [
+                        self.__lookup(
+                            from_collection=from_collection,
+                            local_field=local_field,
+                            as_name=as_name,
+                        ),
+                        self.unwind(as_name),  # type: ignore
+                        *[{"$match": match} for match in matches],
+                    ]
+                )
+                
     def __combine_sequential_matches(self) -> list[dict[str, dict | Any]]:
         merged_pipeline = []
         match_stage = None
@@ -390,5 +446,115 @@ class Aggify:
 
         # Add this new field to base model fields, which we can use it in the next stages.
         self.base_model._fields[as_name] = fields.StringField()  # noqa
+
+        return self
+
+    @staticmethod
+    def get_model_field(model: Document, field: str) -> fields:
+        """
+        Get the field definition of a specified field in a MongoDB model.
+
+        Args:
+            model (Document): The MongoDB model.
+            field (str): The name of the field to retrieve.
+
+        Returns:
+            fields.BaseField: The field definition.
+
+        Raises:
+            InvalidField: If the specified field does not exist in the model.
+        """
+        model_field = model._fields.get(field, None)  # noqa
+        if not model_field:
+            raise InvalidField(field=field)
+        return model_field
+
+    def _replace_base(self, embedded_field) -> str:
+        """
+           Replace the root document with a specified embedded field.
+
+           Args:
+               embedded_field (str): The name of the embedded field to use as the new root.
+
+           Returns:
+               str: The MongoDB aggregation expression for replacing the root.
+
+           Raises:
+               InvalidEmbeddedField: If the specified embedded field is not found or is not of the correct type.
+        """
+        model_field = self.get_model_field(self.base_model, embedded_field)  # noqa
+
+        if not hasattr(model_field, 'document_type') or not issubclass(model_field.document_type, EmbeddedDocument):
+            raise InvalidEmbeddedField(field=embedded_field)
+
+        return f"${model_field.db_field}"
+
+    def replace_root(self, *, embedded_field: str, merge: dict | None = None) -> "Aggify":
+        """
+        Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
+
+        Args:
+            embedded_field (str): The name of the embedded field to use as the new root.
+            merge (dict | None, optional): A dictionary for merging with the new root. Default is None.
+
+        Returns:
+            Aggify: The modified Aggify instance.
+
+        Usage:
+            Aggify().replace_root(embedded_field="myEmbeddedField")
+            Aggify().replace_root(embedded_field="myEmbeddedField", merge={"child_field": default_value_if_not_exists})
+        """
+        name = self._replace_base(embedded_field)
+
+        if not merge:
+            new_root = {
+                "$replaceRoot": {
+                    "$newRoot": name
+                }
+            }
+        else:
+            new_root = {
+                '$replaceRoot': {
+                    'newRoot': {
+                        '$mergeObjects': [
+                            merge, name
+                        ]
+                    }
+                }
+            }
+        self.pipelines.append(new_root)
+
+        return self
+
+    def replace_with(self, *, embedded_field: str, merge: dict | None = None) -> "Aggify":
+        """
+        Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
+
+        Args:
+            embedded_field (str): The name of the embedded field to use as the new root.
+            merge (dict | None, optional): A dictionary for merging with the new root. Default is None.
+
+        Returns:
+            Aggify: The modified Aggify instance.
+
+        Usage:
+            Aggify().replace_root(embedded_field="myEmbeddedField")
+            Aggify().replace_root(embedded_field="myEmbeddedField", merge={"child_field": default_value_if_not_exists})
+        """
+        name = self._replace_base(embedded_field)
+
+        if not merge:
+            new_root = {
+                "$replaceWith": name
+            }
+        else:
+            new_root = {
+                '$replaceWith': {
+                    '$mergeObjects': [
+                        merge, name
+                    ]
+                }
+            }
+        self.pipelines.append(new_root)
 
         return self

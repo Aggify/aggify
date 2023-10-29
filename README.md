@@ -28,9 +28,6 @@ Aggify is a Python library for generating MongoDB aggregation pipelines, designe
 - [ ] `$project` (with expressions): Allows you to use expressions to reshape and calculate values.
 - [ ] `$redact`: Controls document inclusion during the aggregation pipeline.
 
-- [x] Q function : object is primarily used for complex queries that require logical operations
-- [x] F function : object represents the value of a model field, its transformed value, or an annotated column
-
 ## Installation
 
 You can install Aggify using pip:
@@ -47,6 +44,7 @@ Here's a code snippet that demonstrates how to use Aggify to construct a MongoDB
 from aggify import Aggify, Q, F
 from mongoengine import Document, fields
 from pprint import pprint
+
 
 class AccountDocument(Document):
     username = fields.StringField()
@@ -66,6 +64,15 @@ class AccountDocument(Document):
         ],
     }
 
+
+class PostStat(fields.EmbeddedDocument):
+    like_count = fields.IntField(default=0)
+    view_count = fields.IntField(default=0)
+    comment_count = fields.IntField(default=0)
+
+    meta = {'allow_inheritance': True}
+
+
 class PostDocument(Document):
     owner = fields.ReferenceField('AccountDocument', db_field='owner_id')
     caption = fields.StringField()
@@ -75,6 +82,7 @@ class PostDocument(Document):
     hashtags = fields.ListField()
     archived_at = fields.LongField()
     deleted_at = fields.LongField()
+    stat = fields.EmbeddedDocumentField(PostStat)
 
 
 # Create Aggify instance with the base model (e.g., PostDocument)
@@ -111,11 +119,11 @@ pprint(
 )
 
 # output :
-        # [{'$match': {'$and': [{'$or': [{'caption': {'$options': 'i',
-        #                                             '$regex': ".*['hello'].*"}},
-        #                                {'location': {'$options': 'i',
-        #                                              '$regex': '.*test.*'}}]},
-        #                       {'deleted_at': None}]}}]
+# [{'$match': {'$and': [{'$or': [{'caption': {'$options': 'i',
+#                                             '$regex': ".*['hello'].*"}},
+#                                {'location': {'$options': 'i',
+#                                              '$regex': '.*test.*'}}]},
+#                       {'deleted_at': None}]}}]
 
 pprint(
     query.filter(caption='hello')[3:10].pipelines
@@ -160,6 +168,25 @@ pprint(
 #                                                           {'$ne': ['$username',
 #                                                                    'seyed']}]}}}]}},
 #  {'$match': {'posts': {'$ne': []}}}]
+
+pprint(query.replace_root(embedded_field='stat').pipelines)
+# output:
+#  [{'$replaceRoot': {'$newRoot': '$stat'}}]
+
+pprint(query.replace_with(embedded_field='stat').pipelines)
+# output:
+#  [{'$replaceWith': '$stat'}]
+
+pprint(query.replace_with(embedded_field='stat', merge={
+    "like_count": 0,
+    "view_count": 0,
+    "comment_count": 0
+}).pipelines)
+# output:
+#  [{'$replaceWith': {'$mergeObjects': [{'comment_count': 0,
+#                                       'like_count': 0,
+#                                       'view_count': 0},
+#                                      '$stat']}}]
 ```
 
 In the sample usage above, you can see how Aggify simplifies the construction of MongoDB aggregation pipelines by allowing you to chain filters, projections, and other operations to build complex queries. The pprint(query.pipelines) line demonstrates how you can inspect the generated aggregation pipeline for debugging or analysis.
