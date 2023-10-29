@@ -20,7 +20,7 @@ class Operators:
         "not": "$not",
     }
 
-    COMPARSION_OPERATORS = {
+    COMPARISON_OPERATORS = {
         "lt": "$lt",
         "lte": "$lte",
         "gt": "$gt",
@@ -29,7 +29,7 @@ class Operators:
 
     ALL_OPERATORS = {
         **QUERY_OPERATORS,
-        **COMPARSION_OPERATORS,
+        **COMPARISON_OPERATORS,
     }
 
     def __init__(self, match_query: dict[str, Any]):
@@ -165,7 +165,8 @@ class F:
             combined_field = {"$divide": [self.field, other]}
         return F(combined_field)
 
-    def is_suitable_for_match(self, key: str) -> bool:
+    @staticmethod
+    def is_suitable_for_match(key: str) -> bool:
         if "__" not in key:
             return False
         return True
@@ -225,13 +226,14 @@ class Match:
         self.matches = matches
         self.base_model = base_model
 
-    def validate_operator(self, key: str):
-        if (operator := key.rsplit("__", 1)[1]) not in Operators.COMPARSION_OPERATORS:
+    @staticmethod
+    def validate_operator(key: str):
+        if (operator := key.rsplit("__", 1)[1]) not in Operators.COMPARISON_OPERATORS:
             raise InvalidOperator(operator)
 
     def is_base_model_field(self, field) -> bool:
         return self.base_model is not None and isinstance(
-            self.base_model._fields.get(field),  # type: ignore
+            self.base_model._fields.get(field),  # type: ignore # noqa
             EmbeddedDocumentField,
         )
 
@@ -243,7 +245,7 @@ class Match:
                 continue
 
             if isinstance(value, F):
-                if value.is_suitable_for_match(key) is False:
+                if F.is_suitable_for_match(key) is False:
                     raise InvalidOperator(key)
 
             field, operator, *_ = key.split("__")

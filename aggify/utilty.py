@@ -1,5 +1,8 @@
-from aggify.exceptions import MongoIndexError, InvalidField
+from typing import Any
+
 from mongoengine import Document
+
+from aggify.exceptions import MongoIndexError, InvalidField
 
 
 def int_to_slice(final_index: int) -> slice:
@@ -73,7 +76,7 @@ def replace_values_recursive(obj, replacements):
         return obj
 
 
-def convert_match_query(d: dict) -> dict:
+def convert_match_query(d: dict) -> dict[Any, list[str | Any] | dict] | list[dict] | dict:
     """
     Recursively transform a dictionary to modify the structure of '$eq' and '$ne' operators.
 
