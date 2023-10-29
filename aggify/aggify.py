@@ -1,11 +1,30 @@
+import functools
 from typing import Any, Literal, Type
 
 from mongoengine import Document, EmbeddedDocument, fields
 
 from aggify.compiler import F, Match, Q  # noqa keep
-from aggify.exceptions import AggifyValueError, AnnotationError, InvalidField
+from aggify.exceptions import AggifyValueError, AnnotationError, OutStageError
 from aggify.types import QueryParams
 from aggify.utilty import to_mongo_positive_index, check_fields_exist, replace_values_recursive, convert_match_query
+
+
+def last_out_stage_check(method):
+    """Check if the last stage is $out or not
+
+    This decorator check if the last stage is $out or not
+    MongoDB does not allow adding aggregation pipeline stage after $out stage
+    """
+    @functools.wraps(method)
+    def decorator(*args, **kwargs):
+        try:
+            if is_last_out := bool(args[0].pipelines[-1].get('out')):
+                raise OutStageError(method.__name__)
+        except IndexError:
+            return method(*args, **kwargs)
+        else:
+            return method(*args, **kwargs)
+    return decorator
 
 
 class Aggify:
@@ -22,43 +41,29 @@ class Aggify:
         self.stop = None
         self.q = None
 
-    @staticmethod
-    def unwind(
-            path: str, preserve: bool = True
-    ) -> dict[
-        Literal["$unwind"],
-        dict[Literal["path", "preserveNullAndEmptyArrays"], str | bool],
-    ]:
-        """
-        Generates a MongoDB unwind pipeline stage.
-
-        Args:
-            path: The path to unwind.
-            preserve: Whether to preserve null and empty arrays.
-
-        Returns:
-            A MongoDB unwind pipeline stage.
-        """
-        return {"$unwind": {"path": f"${path}", "preserveNullAndEmptyArrays": preserve}}
-
+    @last_out_stage_check
     def project(self, **kwargs: QueryParams) -> "Aggify":
         self.pipelines.append({"$project": kwargs})
         return self
 
+    @last_out_stage_check
     def group(self, key: str = "_id") -> "Aggify":
         self.pipelines.append({"$group": {"_id": f"${key}"}})
         return self
 
+    @last_out_stage_check
     def order_by(self, field: str) -> "Aggify":
         self.pipelines.append(
             {"$sort": {f'{field.replace("-", "")}': -1 if field.startswith("-") else 1}}
         )
         return self
 
+    @last_out_stage_check
     def raw(self, raw_query: dict) -> "Aggify":
         self.pipelines.append(raw_query)
         return self
 
+    @last_out_stage_check
     def add_fields(self, fields: dict) -> "Aggify":  # noqa
         """
         Generates a MongoDB addFields pipeline stage.
@@ -82,15 +87,7 @@ class Aggify:
         self.pipelines.append(add_fields_stage)
         return self
 
-    def aggregate(self):
-        """
-        Returns the aggregated results.
-
-        Returns:
-            The aggregated results.
-        """
-        return self.base_model.objects.aggregate(*self.pipelines)  # type: ignore
-
+    @last_out_stage_check
     def filter(self, arg: Q | None = None, **kwargs: QueryParams) -> "Aggify":
         """
         # TODO: missing docs
@@ -107,6 +104,92 @@ class Aggify:
             self.pipelines.append(dict(arg))
 
         return self
+
+    def __to_aggregate(self, query: dict[str, Any]) -> None:
+        """
+        Builds the pipelines list based on the query parameters.
+        """
+        skip_list = []
+
+        for key, value in query.items():
+            if key in skip_list:
+                continue
+
+            split_query = key.split("__")
+            join_field = self.base_model._fields.get(split_query[0])  # type: ignore
+            if not join_field:
+                raise ValueError(f"Invalid field: {split_query[0]}")
+            # This is a nested query.
+            if "document_type_obj" not in join_field.__dict__ or issubclass(
+                    join_field.document_type, EmbeddedDocument
+            ):
+                match = self.__match({key: value})
+                if (match.get("$match")) != {}:
+                    self.pipelines.append(match)
+            else:
+                from_collection = join_field.document_type._meta["collection"]  # noqa
+                local_field = join_field.db_field
+                as_name = join_field.name
+                matches = []
+                for k, v in query.items():
+                    if k.split("__")[0] == split_query[0]:
+                        skip_list.append(k)
+                        _key = k.replace("__", ".", 1)
+                        match = self.__match({_key: v}).get("$match")
+                        if match != {}:
+                            matches.append(match)
+
+                self.pipelines.extend(
+                    [
+                        self.__lookup(
+                            from_collection=from_collection,
+                            local_field=local_field,
+                            as_name=as_name,
+                        ),
+                        self.unwind(as_name),  # type: ignore
+                        *[{"$match": match} for match in matches],
+                    ]
+                )
+
+    def __getitem__(self, index: slice | int) -> "Aggify":
+        """
+        # TODO: missing docs
+        """
+        if isinstance(index, (int, slice)) is False:
+            raise AggifyValueError([int, slice], type(index))
+
+        index = to_mongo_positive_index(index)
+        self.pipelines.append({"$skip": int(index.start)})
+        self.pipelines.append({"$limit": int(index.stop - index.start)})
+        return self
+
+    @staticmethod
+    def unwind(
+            path: str, preserve: bool = True
+    ) -> dict[
+        Literal["$unwind"],
+        dict[Literal["path", "preserveNullAndEmptyArrays"], str | bool],
+    ]:
+        """
+        Generates a MongoDB unwind pipeline stage.
+
+        Args:
+            path: The path to unwind.
+            preserve: Whether to preserve null and empty arrays.
+
+        Returns:
+            A MongoDB unwind pipeline stage.
+        """
+        return {"$unwind": {"path": f"${path}", "preserveNullAndEmptyArrays": preserve}}
+
+    def aggregate(self):
+        """
+        Returns the aggregated results.
+
+        Returns:
+            The aggregated results.
+        """
+        return self.base_model.objects.aggregate(*self.pipelines)  # type: ignore
 
     def annotate(self, annotate_name, accumulator, f):
         try:
@@ -182,52 +265,6 @@ class Aggify:
             }
         }
 
-    def __to_aggregate(self, query: dict[str, Any]) -> None:
-        """
-        Builds the pipelines list based on the query parameters.
-        """
-        skip_list = []
-
-        for key, value in query.items():
-            if key in skip_list:
-                continue
-
-            split_query = key.split("__")
-            join_field = self.base_model._fields.get(split_query[0])  # type: ignore
-            if not join_field:
-                raise ValueError(f"Invalid field: {split_query[0]}")
-            # This is a nested query.
-            if "document_type_obj" not in join_field.__dict__ or issubclass(
-                    join_field.document_type, EmbeddedDocument
-            ):
-                match = self.__match({key: value})
-                if (match.get("$match")) != {}:
-                    self.pipelines.append(match)
-            else:
-                from_collection = join_field.document_type._meta["collection"]  # noqa
-                local_field = join_field.db_field
-                as_name = join_field.name
-                matches = []
-                for k, v in query.items():
-                    if k.split("__")[0] == split_query[0]:
-                        skip_list.append(k)
-                        _key = k.replace("__", ".", 1)
-                        match = self.__match({_key: v}).get("$match")
-                        if match != {}:
-                            matches.append(match)
-
-                self.pipelines.extend(
-                    [
-                        self.__lookup(
-                            from_collection=from_collection,
-                            local_field=local_field,
-                            as_name=as_name,
-                        ),
-                        self.unwind(as_name),  # type: ignore
-                        *[{"$match": match} for match in matches],
-                    ]
-                )
-
     def __combine_sequential_matches(self) -> list[dict[str, dict | Any]]:
         merged_pipeline = []
         match_stage = None
@@ -249,18 +286,6 @@ class Aggify:
             merged_pipeline.append({"$match": match_stage})
 
         return merged_pipeline
-
-    def __getitem__(self, index: slice | int) -> "Aggify":
-        """
-        # TODO: missing docs
-        """
-        if isinstance(index, (int, slice)) is False:
-            raise AggifyValueError([int, slice], type(index))
-
-        index = to_mongo_positive_index(index)
-        self.pipelines.append({"$skip": int(index.start)})
-        self.pipelines.append({"$limit": int(index.stop - index.start)})
-        return self
 
     def lookup(self, from_collection: Document, let: list[str], query: list[Q], as_name: str) -> "Aggify":
         """
