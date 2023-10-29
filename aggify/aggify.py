@@ -130,7 +130,8 @@ class Aggify:
             "push": "$push",
             "addToSet": "$addToSet",
             "stdDevPop": "$stdDevPop",
-            "stdDevSamp": "$stdDevSamp"
+            "stdDevSamp": "$stdDevSamp",
+            "merge": "$mergeObjects",
         }
 
         # Determine the data type based on the accumulator
