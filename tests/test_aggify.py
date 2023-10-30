@@ -387,3 +387,28 @@ class TestAggify:
         assert len(aggify.pipelines) == 1
         assert aggify.pipelines[-1]["$out"]["db"] == "db_name"
         assert aggify.pipelines[-1]["$out"]["coll"] == "collection"
+
+    def test_unwind_just_path(self):
+        aggify = Aggify(BaseModel)
+        thing = aggify.unwind(path='Hello')
+        assert len(thing.pipelines) == 1
+        assert thing.pipelines[-1]['$unwind'] == "$Hello"
+
+    @pytest.mark.parametrize(
+        "params",
+        (
+            {"include_index_array": 'Mahdi'},
+            {"preserve": True},
+            {"include_index_array": "Mahdi", "preserve": True}
+        )
+    )
+    def test_unwind_with_parameters(self, params):
+        aggify = Aggify(BaseModel)
+        thing = aggify.unwind('Hi', **params)
+        assert len(thing.pipelines) == 1
+        include = params.get('include_index_array')
+        preserve = params.get('preserve')
+        if include is not None:
+            assert thing.pipelines[-1]['$unwind']['includeArrayIndex'] == 'Mahdi'
+        if preserve is not None:
+            assert thing.pipelines[-1]['$unwind']['preserveNullAndEmptyArrays'] is True

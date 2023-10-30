@@ -70,8 +70,8 @@ cases = [
                     "localField": "owner_id",
                 }
             },
-            {"$unwind": {"path": "$owner", "preserveNullAndEmptyArrays": True}},
             {"$match": {"owner.deleted_at": None}},
+            {"$unwind": "$owner"},
         ],
     ),
     ParameterTestCase(
@@ -283,7 +283,4 @@ cases = [
 
 @pytest.mark.parametrize("case", cases)
 def test_query_compiler(case: ParameterTestCase):
-    print(str(case.compiled_query))
-    print(case.compiled_query.pipelines)
-    print(case.expected_query)
-    assert case.compiled_query.pipelines == case.expected_query
+    assert case.compiled_query.pipelines == case.expected_query, case

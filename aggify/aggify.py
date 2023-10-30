@@ -210,10 +210,10 @@ class Aggify:
                             local_field=local_field,
                             as_name=as_name,
                         ),
-                        self.unwind(as_name),  # type: ignore
                         *[{"$match": match} for match in matches],
                     ]
                 )
+                self.unwind(as_name)
 
     @last_out_stage_check
     def __getitem__(self, index: slice | int) -> "Aggify":
