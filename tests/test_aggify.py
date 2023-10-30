@@ -366,7 +366,7 @@ class TestAggify:
             ("add_fields", ({"$field": "value"},)),
             ("filter", (Q(age=20),)),
             ("__getitem__", (slice(2, 10),)),
-            ("unwind", ('path',))
+            ("unwind", ("path",)),
         ),
     )
     def test_out_stage_error(self, method, args):
@@ -390,25 +390,25 @@ class TestAggify:
 
     def test_unwind_just_path(self):
         aggify = Aggify(BaseModel)
-        thing = aggify.unwind(path='Hello')
+        thing = aggify.unwind(path="Hello")
         assert len(thing.pipelines) == 1
-        assert thing.pipelines[-1]['$unwind'] == "$Hello"
+        assert thing.pipelines[-1]["$unwind"] == "$Hello"
 
     @pytest.mark.parametrize(
         "params",
         (
-            {"include_index_array": 'Mahdi'},
+            {"include_index_array": "Mahdi"},
             {"preserve": True},
-            {"include_index_array": "Mahdi", "preserve": True}
-        )
+            {"include_index_array": "Mahdi", "preserve": True},
+        ),
     )
     def test_unwind_with_parameters(self, params):
         aggify = Aggify(BaseModel)
-        thing = aggify.unwind('Hi', **params)
+        thing = aggify.unwind("Hi", **params)
         assert len(thing.pipelines) == 1
-        include = params.get('include_index_array')
-        preserve = params.get('preserve')
+        include = params.get("include_index_array")
+        preserve = params.get("preserve")
         if include is not None:
-            assert thing.pipelines[-1]['$unwind']['includeArrayIndex'] == 'Mahdi'
+            assert thing.pipelines[-1]["$unwind"]["includeArrayIndex"] == "Mahdi"
         if preserve is not None:
-            assert thing.pipelines[-1]['$unwind']['preserveNullAndEmptyArrays'] is True
+            assert thing.pipelines[-1]["$unwind"]["preserveNullAndEmptyArrays"] is True
