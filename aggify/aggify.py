@@ -3,7 +3,7 @@ from typing import Any, Literal, Dict, Type
 
 from mongoengine import Document, EmbeddedDocument, fields
 
-from aggify.compiler import F, Match, Q  # noqa keep
+from aggify.compiler import F, Match, Q, Operators  # noqa keep
 from aggify.exceptions import AggifyValueError, AnnotationError, InvalidField, InvalidEmbeddedField, OutStageError
 from aggify.types import QueryParams
 from aggify.utilty import (
@@ -164,19 +164,28 @@ class Aggify:
             if key in skip_list:
                 continue
 
+            # Split the key to access the field information.
             split_query = key.split("__")
-            join_field = self.base_model._fields.get(split_query[0])  # type: ignore
-            if not join_field:
-                raise ValueError(f"Invalid field: {split_query[0]}")
-            # This is a nested query.
-            if "document_type_obj" not in join_field.__dict__ or issubclass(
-                    join_field.document_type, EmbeddedDocument
+
+            # Retrieve the field definition from the model.
+            join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore # noqa
+
+            # Check conditions for creating a 'match' pipeline stage.
+            if (
+                    "document_type_obj" not in join_field.__dict__
+                    or issubclass(join_field.document_type, EmbeddedDocument)
+                    or len(split_query) == 1
+                    or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
             ):
+                # Create a 'match' pipeline stage.
                 match = self.__match({key: value})
-                if (match.get("$match")) != {}:
+
+                # Check if the 'match' stage is not empty before adding it to the pipelines.
+                if match.get("$match"):
                     self.pipelines.append(match)
+
             else:
-                from_collection = join_field.document_type._meta["collection"]  # noqa
+                from_collection = join_field.document_type  # noqa
                 local_field = join_field.db_field
                 as_name = join_field.name
                 matches = []
@@ -191,7 +200,7 @@ class Aggify:
                 self.pipelines.extend(
                     [
                         self.__lookup(
-                            from_collection=from_collection,
+                            from_collection=from_collection._meta["collection"],  # noqa
                             local_field=local_field,
                             as_name=as_name,
                         ),
