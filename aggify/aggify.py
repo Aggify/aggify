@@ -203,17 +203,15 @@ class Aggify:
                         if match != {}:
                             matches.append(match)
 
-                self.pipelines.extend(
-                    [
-                        self.__lookup(
-                            from_collection=from_collection._meta["collection"],  # noqa
-                            local_field=local_field,
-                            as_name=as_name,
-                        ),
-                        *[{"$match": match} for match in matches],
-                    ]
+                self.pipelines.append(
+                    self.__lookup(
+                        from_collection=from_collection._meta["collection"],  # noqa
+                        local_field=local_field,
+                        as_name=as_name,
+                    )
                 )
                 self.unwind(as_name)
+                self.pipelines.extend([{"$match": match} for match in matches])
 
     @last_out_stage_check
     def __getitem__(self, index: slice | int) -> "Aggify":

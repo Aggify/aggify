@@ -70,8 +70,9 @@ cases = [
                     "localField": "owner_id",
                 }
             },
-            {"$match": {"owner.deleted_at": None}},
             {"$unwind": "$owner"},
+            {"$match": {"owner.deleted_at": None}},
+
         ],
     ),
     ParameterTestCase(
