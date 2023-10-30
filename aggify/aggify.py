@@ -4,7 +4,13 @@ from typing import Any, Literal, Dict, Type
 from mongoengine import Document, EmbeddedDocument, fields
 
 from aggify.compiler import F, Match, Q, Operators  # noqa keep
-from aggify.exceptions import AggifyValueError, AnnotationError, InvalidField, InvalidEmbeddedField, OutStageError
+from aggify.exceptions import (
+    AggifyValueError,
+    AnnotationError,
+    InvalidField,
+    InvalidEmbeddedField,
+    OutStageError,
+)
 from aggify.types import QueryParams
 from aggify.utilty import (
     to_mongo_positive_index,
@@ -172,10 +178,10 @@ class Aggify:
 
             # Check conditions for creating a 'match' pipeline stage.
             if (
-                    "document_type_obj" not in join_field.__dict__
-                    or issubclass(join_field.document_type, EmbeddedDocument)
-                    or len(split_query) == 1
-                    or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
+                "document_type_obj" not in join_field.__dict__
+                or issubclass(join_field.document_type, EmbeddedDocument)
+                or len(split_query) == 1
+                or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
             ):
                 # Create a 'match' pipeline stage.
                 match = self.__match({key: value})
@@ -197,17 +203,15 @@ class Aggify:
                         if match != {}:
                             matches.append(match)
 
-                self.pipelines.extend(
-                    [
-                        self.__lookup(
-                            from_collection=from_collection._meta["collection"],  # noqa
-                            local_field=local_field,
-                            as_name=as_name,
-                        ),
-                        self.unwind(as_name),  # type: ignore
-                        *[{"$match": match} for match in matches],
-                    ]
+                self.pipelines.append(
+                    self.__lookup(
+                        from_collection=from_collection._meta["collection"],  # noqa
+                        local_field=local_field,
+                        as_name=as_name,
+                    )
                 )
+                self.unwind(as_name)
+                self.pipelines.extend([{"$match": match} for match in matches])
 
     @last_out_stage_check
     def __getitem__(self, index: slice | int) -> "Aggify":
@@ -222,24 +226,55 @@ class Aggify:
         self.pipelines.append({"$limit": int(index.stop - index.start)})
         return self
 
-    @staticmethod
+    @last_out_stage_check
     def unwind(
-            path: str, preserve: bool = True
-    ) -> dict[
-        Literal["$unwind"],
-        dict[Literal["path", "preserveNullAndEmptyArrays"], str | bool],
-    ]:
-        """
-        Generates a MongoDB unwind pipeline stage.
+        self, path: str, include_index_array: str | None = None, preserve: bool = False
+    ) -> "Aggify":
+        """Generates a MongoDB unwind pipeline stage.
 
         Args:
-            path: The path to unwind.
-            preserve: Whether to preserve null and empty arrays.
+            path: Field path to an array field.
+              To specify a field path, prefix the field name with a dollar sign $
+              and enclose in quotes.
 
-        Returns:
-            A MongoDB unwind pipeline stage.
+            include_index_array: The name of a new field to hold the array index of the element.
+              The name cannot start with a dollar sign $.
+
+            preserve: Whether to preserve null and empty arrays.
+                  If true, if the path is null, missing, or an empty array,
+                  $unwind outputs the document.
+
+                  If false, if path is null, missing, or an empty array,
+                  $unwind does not output a document.
+
+        Stages:
+            { $unwind: <field path> }
+
+            {
+              $unwind:
+                {
+                  path: <field path>,
+                  includeArrayIndex: <string>,
+                  preserveNullAndEmptyArrays: <boolean>
+                }
+            }
+
+        docs: https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/
         """
-        return {"$unwind": {"path": f"${path}", "preserveNullAndEmptyArrays": preserve}}
+
+        if include_index_array is None and preserve is False:
+            self.pipelines.append({"$unwind": f"${path}"})
+            return self
+        self.pipelines.append(
+            {
+                "$unwind": {
+                    "path": f"${path}",
+                    "includeArrayIndex": include_index_array,
+                    "preserveNullAndEmptyArrays": preserve,
+                }
+            }
+        )
+        return self
 
     def aggregate(self):
         """
@@ -250,8 +285,9 @@ class Aggify:
         """
         return self.base_model.objects.aggregate(*self.pipelines)  # type: ignore
 
-    def annotate(self, annotate_name: str, accumulator: str,
-                 f: str | dict | F | int) -> "Aggify":
+    def annotate(
+        self, annotate_name: str, accumulator: str, f: str | dict | F | int
+    ) -> "Aggify":
         """
         Annotate a MongoDB aggregation pipeline with a new field.
         Usage: https://www.mongodb.com/docs/manual/reference/operator/aggregation/group/#accumulator-operator
@@ -288,7 +324,10 @@ class Aggify:
             "median": (fields.DynamicField(), "$median"),
             "mergeObjects": (fields.DictField(), "$mergeObjects"),
             "top": (fields.EmbeddedDocumentField(fields.EmbeddedDocument), "$top"),
-            "bottom": (fields.EmbeddedDocumentField(fields.EmbeddedDocument), "$bottom"),
+            "bottom": (
+                fields.EmbeddedDocumentField(fields.EmbeddedDocument),
+                "$bottom",
+            ),
             "topN": (fields.ListField(), "$topN"),
             "bottomN": (fields.ListField(), "$bottomN"),
             "firstN": (fields.ListField(), "$firstN"),
@@ -299,9 +338,13 @@ class Aggify:
         try:
             stage = list(self.pipelines[-1].keys())[0]
             if stage != "$group":
-                raise AnnotationError(f"Annotations apply only to $group, not to {stage}")
+                raise AnnotationError(
+                    f"Annotations apply only to $group, not to {stage}"
+                )
         except IndexError:
-            raise AnnotationError("Annotations apply only to $group, your pipeline is empty")
+            raise AnnotationError(
+                "Annotations apply only to $group, your pipeline is empty"
+            )
 
         try:
             field_type, acc = aggregation_mapping[accumulator]
@@ -339,7 +382,7 @@ class Aggify:
 
     @staticmethod
     def __lookup(
-            from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
+        from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
     ) -> dict[str, dict[str, str]]:
         """
         Generates a MongoDB lookup pipeline stage.
@@ -386,7 +429,7 @@ class Aggify:
 
     @last_out_stage_check
     def lookup(
-            self, from_collection: Document, let: list[str], query: list[Q], as_name: str
+        self, from_collection: Document, let: list[str], query: list[Q], as_name: str
     ) -> "Aggify":
         """
         Generates a MongoDB lookup pipeline stage.
@@ -403,7 +446,8 @@ class Aggify:
         check_fields_exist(self.base_model, let)  # noqa
 
         let_dict = {
-            field: f"${self.base_model._fields[field].db_field}" for field in let  # noqa
+            field: f"${self.base_model._fields[field].db_field}"
+            for field in let  # noqa
         }
         from_collection = from_collection._meta.get("collection")  # noqa
 
@@ -465,26 +509,30 @@ class Aggify:
 
     def _replace_base(self, embedded_field) -> str:
         """
-           Replace the root document with a specified embedded field.
+        Replace the root document with a specified embedded field.
 
-           Args:
-               embedded_field (str): The name of the embedded field to use as the new root.
+        Args:
+            embedded_field (str): The name of the embedded field to use as the new root.
 
-           Returns:
-               str: The MongoDB aggregation expression for replacing the root.
+        Returns:
+            str: The MongoDB aggregation expression for replacing the root.
 
-           Raises:
-               InvalidEmbeddedField: If the specified embedded field is not found or is not of the correct type.
+        Raises:
+            InvalidEmbeddedField: If the specified embedded field is not found or is not of the correct type.
         """
         model_field = self.get_model_field(self.base_model, embedded_field)  # noqa
 
-        if not hasattr(model_field, 'document_type') or not issubclass(model_field.document_type, EmbeddedDocument):
+        if not hasattr(model_field, "document_type") or not issubclass(
+            model_field.document_type, EmbeddedDocument
+        ):
             raise InvalidEmbeddedField(field=embedded_field)
 
         return f"${model_field.db_field}"
 
     @last_out_stage_check
-    def replace_root(self, *, embedded_field: str, merge: dict | None = None) -> "Aggify":
+    def replace_root(
+        self, *, embedded_field: str, merge: dict | None = None
+    ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
 
@@ -502,27 +550,17 @@ class Aggify:
         name = self._replace_base(embedded_field)
 
         if not merge:
-            new_root = {
-                "$replaceRoot": {
-                    "$newRoot": name
-                }
-            }
+            new_root = {"$replaceRoot": {"$newRoot": name}}
         else:
-            new_root = {
-                '$replaceRoot': {
-                    'newRoot': {
-                        '$mergeObjects': [
-                            merge, name
-                        ]
-                    }
-                }
-            }
+            new_root = {"$replaceRoot": {"newRoot": {"$mergeObjects": [merge, name]}}}
         self.pipelines.append(new_root)
 
         return self
 
     @last_out_stage_check
-    def replace_with(self, *, embedded_field: str, merge: dict | None = None) -> "Aggify":
+    def replace_with(
+        self, *, embedded_field: str, merge: dict | None = None
+    ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
 
@@ -540,17 +578,9 @@ class Aggify:
         name = self._replace_base(embedded_field)
 
         if not merge:
-            new_root = {
-                "$replaceWith": name
-            }
+            new_root = {"$replaceWith": name}
         else:
-            new_root = {
-                '$replaceWith': {
-                    '$mergeObjects': [
-                        merge, name
-                    ]
-                }
-            }
+            new_root = {"$replaceWith": {"$mergeObjects": [merge, name]}}
         self.pipelines.append(new_root)
 
         return self
