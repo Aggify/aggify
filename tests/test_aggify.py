@@ -2,7 +2,7 @@ import pytest
 from mongoengine import Document, IntField, StringField
 
 from aggify import Aggify, Cond, F, Q
-from aggify.exceptions import AggifyValueError, AnnotationError
+from aggify.exceptions import AggifyValueError, AnnotationError, OutStageError
 
 
 class BaseModel(Document):
@@ -26,7 +26,6 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         thing = aggify[0:10]
         assert isinstance(thing, Aggify)
-        print(thing.pipelines)
         assert thing.pipelines[-1]["$limit"] == 10
         assert thing.pipelines[-2]["$skip"] == 0
 
@@ -40,7 +39,6 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         aggify.filter(age__gte=30).project(name=1, age=1)
         assert len(aggify.pipelines) == 2
-        print(type(aggify.pipelines[1]))
         assert aggify.pipelines[1]["$project"] == {"name": 1, "age": 1}
 
     def test_filtering_and_ordering(self):
@@ -250,3 +248,36 @@ class TestAggify:
         assert thing.pipelines[-1]["$group"]["some_name"] == {
             f"${accumulator}": "$some_value"
         }
+
+    def test_out_with_project_stage_error(self):
+        with pytest.raises(OutStageError):
+            Aggify(BaseModel).out("Hi").project(age=1)
+
+    @pytest.mark.parametrize(
+        ("method", "args"),
+        (
+            ("group", ("_id",)),
+            ("order_by", ("field",)),
+            ("raw", ({"$query": "query"},)),
+            ("add_fields", ({"$field": "value"},)),
+            ("filter", (Q(age=20),)),
+        ),
+    )
+    def test_out_stage_error(self, method, args):
+        aggify = Aggify(BaseModel)
+        aggify.out("coll")
+        with pytest.raises(OutStageError):
+            getattr(Aggify, method)(aggify, *args)
+
+    def test_out_db_none(self):
+        aggify = Aggify(BaseModel)
+        aggify.out("collection")
+        assert len(aggify.pipelines) == 1
+        assert aggify.pipelines[-1]["$out"] == "collection"
+
+    def test_out(self):
+        aggify = Aggify(BaseModel)
+        aggify.out("collection", "db_name")
+        assert len(aggify.pipelines) == 1
+        assert aggify.pipelines[-1]["$out"]["db"] == "db_name"
+        assert aggify.pipelines[-1]["$out"]["coll"] == "collection"

@@ -44,7 +44,9 @@ def check_fields_exist(model: Document, fields_to_check: list[str]) -> None:
     Raises:
         InvalidField: If any of the specified fields are missing in the model's fields.
     """
-    missing_fields = [field for field in fields_to_check if not model._fields.get(field)]  # noqa
+    missing_fields = [
+        field for field in fields_to_check if not model._fields.get(field)
+    ]  # noqa
     if missing_fields:
         raise InvalidField(field=missing_fields[0])
 
@@ -70,8 +72,8 @@ def replace_values_recursive(obj, replacements):
         for key, value in obj.items():
             updated_stage[key] = replace_values_recursive(value, replacements)
         return updated_stage
-    elif str(obj).replace("$", '') in replacements:
-        return replacements[obj.replace("$", '')]
+    elif str(obj).replace("$", "") in replacements:
+        return replacements[obj.replace("$", "")]
     else:
         return obj
 
@@ -99,7 +101,7 @@ def convert_match_query(d: dict) -> dict[Any, list[str | Any] | dict] | list[dic
     if isinstance(d, dict):
         new_dict = {}
         for key, value in d.items():
-            if isinstance(value, dict) and ('$eq' in value or '$ne' in value):
+            if isinstance(value, dict) and ("$eq" in value or "$ne" in value):
                 for operator, operand in value.items():
                     new_dict[operator] = [f"${key}", operand]
             else:

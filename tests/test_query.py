@@ -50,13 +50,13 @@ class PostDocument(Document):
 
 
 @dataclass
-class TestCase:
+class ParameterTestCase:
     compiled_query: Aggify
     expected_query: list
 
 
 cases = [
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument).filter(
             caption__contains="hello", owner__deleted_at=None
         ),
@@ -74,7 +74,7 @@ cases = [
             {"$match": {"owner.deleted_at": None}},
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument)
         .filter(caption__contains="hello")
         .project(caption=1, deleted_at=0),
@@ -83,7 +83,7 @@ cases = [
             {"$project": {"caption": 1, "deleted_at": 0}},
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument).filter(
             (Q(caption__contains=["hello"]) | Q(location__contains="test"))
             & Q(deleted_at=None)
@@ -109,15 +109,15 @@ cases = [
             }
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument).filter(caption="hello")[3:10],
         expected_query=[{"$match": {"caption": "hello"}}, {"$skip": 3}, {"$limit": 7}],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=Aggify(PostDocument).filter(caption="hello").order_by("-_id"),
         expected_query=[{"$match": {"caption": "hello"}}, {"$sort": {"_id": -1}}],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).add_fields(
                 {
@@ -137,63 +137,102 @@ cases = [
             }
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).lookup(
-                AccountDocument, query=[  # noqa
-                    Q(_id__ne='owner') & Q(username__ne='seyed'),
-                ], let=['owner'], as_name='posts'
+                AccountDocument,
+                query=[  # noqa
+                    Q(_id__ne="owner") & Q(username__ne="seyed"),
+                ],
+                let=["owner"],
+                as_name="posts",
             )
         ),
         expected_query=[
-            {'$lookup': {'as': 'posts',
-                         'from': 'account',
-                         'let': {'owner': '$owner_id'},
-                         'pipeline': [{'$match': {'$expr': {'$and': [{'$ne': ['$_id',
-                                                                              '$$owner']},
-                                                                     {'$ne': ['$username',
-                                                                              'seyed']}]}}}]}}
+            {
+                "$lookup": {
+                    "as": "posts",
+                    "from": "account",
+                    "let": {"owner": "$owner_id"},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$ne": ["$_id", "$$owner"]},
+                                        {"$ne": ["$username", "seyed"]},
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                }
+            }
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
-            Aggify(PostDocument).lookup(
-                AccountDocument, query=[  # noqa
-                    Q(_id__ne='owner') & Q(username__ne='seyed'),
-                ], let=['owner'], as_name='posts'
-            ).filter(posts__ne=[])
+            Aggify(PostDocument)
+            .lookup(
+                AccountDocument,
+                query=[  # noqa
+                    Q(_id__ne="owner") & Q(username__ne="seyed"),
+                ],
+                let=["owner"],
+                as_name="posts",
+            )
+            .filter(posts__ne=[])
         ),
         expected_query=[
-            {'$lookup': {'as': 'posts',
-                         'from': 'account',
-                         'let': {'owner': '$owner_id'},
-                         'pipeline': [{'$match': {'$expr': {'$and': [{'$ne': ['$_id',
-                                                                              '$$owner']},
-                                                                     {'$ne': ['$username',
-                                                                              'seyed']}]}}}]}},
-            {'$match': {'posts': {'$ne': []}}}
+            {
+                "$lookup": {
+                    "as": "posts",
+                    "from": "account",
+                    "let": {"owner": "$owner_id"},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$ne": ["$_id", "$$owner"]},
+                                        {"$ne": ["$username", "seyed"]},
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                }
+            },
+            {"$match": {"posts": {"$ne": []}}},
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
-            Aggify(PostDocument).lookup(
-                AccountDocument, query=[  # noqa
-                    Q(_id__exact='owner'),
-                    Q(username__exact='caption')
-                ], let=['owner', 'caption'], as_name='posts'
-            ).filter(posts__ne=[])
+            Aggify(PostDocument)
+            .lookup(
+                AccountDocument,
+                query=[Q(_id__exact="owner"), Q(username__exact="caption")],  # noqa
+                let=["owner", "caption"],
+                as_name="posts",
+            )
+            .filter(posts__ne=[])
         ),
         expected_query=[
-            {'$lookup': {'as': 'posts',
-                         'from': 'account',
-                         'let': {'caption': '$caption', 'owner': '$owner_id'},
-                         'pipeline': [{'$match': {'$expr': {'$eq': ['$_id', '$$owner']}}},
-                                      {'$match': {'$expr': {'$eq': ['$username',
-                                                                    '$$caption']}}}]}},
-            {'$match': {'posts': {'$ne': []}}}
+            {
+                "$lookup": {
+                    "as": "posts",
+                    "from": "account",
+                    "let": {"caption": "$caption", "owner": "$owner_id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$owner"]}}},
+                        {"$match": {"$expr": {"$eq": ["$username", "$$caption"]}}},
+                    ],
+                }
+            },
+            {"$match": {"posts": {"$ne": []}}},
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).replace_root(embedded_field='stat')
         ),
@@ -201,7 +240,7 @@ cases = [
             {'$replaceRoot': {'$newRoot': '$stat'}}
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).replace_with(embedded_field='stat')
         ),
@@ -209,7 +248,7 @@ cases = [
             {'$replaceWith': '$stat'}
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).replace_with(embedded_field='stat', merge={
                 "like_count": 0,
@@ -224,7 +263,7 @@ cases = [
                                                 '$stat']}}
         ],
     ),
-    TestCase(
+    ParameterTestCase(
         compiled_query=(
             Aggify(PostDocument).replace_root(embedded_field='stat', merge={
                 "like_count": 0,
@@ -243,7 +282,7 @@ cases = [
 
 
 @pytest.mark.parametrize("case", cases)
-def test_query_compiler(case: TestCase):
+def test_query_compiler(case: ParameterTestCase):
     print(str(case.compiled_query))
     print(case.compiled_query.pipelines)
     print(case.expected_query)
