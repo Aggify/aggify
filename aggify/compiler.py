@@ -251,7 +251,9 @@ class Match:
             field, operator, *_ = key.split("__")
             if self.is_base_model_field(field):
                 pipelines.append(
-                    Match({key.replace("__", ".", 1): value}, self.base_model).compile([])
+                    Match({key.replace("__", ".", 1): value}, self.base_model).compile(
+                        []
+                    )
                 )
                 continue
 

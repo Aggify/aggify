@@ -34,11 +34,11 @@ class PostStat(fields.EmbeddedDocument):
     view_count = fields.IntField(default=0)
     comment_count = fields.IntField(default=0)
 
-    meta = {'allow_inheritance': True}
+    meta = {"allow_inheritance": True}
 
 
 class PostDocument(Document):
-    owner = fields.ReferenceField('AccountDocument', db_field='owner_id')
+    owner = fields.ReferenceField("AccountDocument", db_field="owner_id")
     caption = fields.StringField()
     location = fields.StringField()
     comment_disabled = fields.BooleanField()
@@ -233,49 +233,49 @@ cases = [
         ],
     ),
     ParameterTestCase(
+        compiled_query=(Aggify(PostDocument).replace_root(embedded_field="stat")),
+        expected_query=[{"$replaceRoot": {"$newRoot": "$stat"}}],
+    ),
+    ParameterTestCase(
+        compiled_query=(Aggify(PostDocument).replace_with(embedded_field="stat")),
+        expected_query=[{"$replaceWith": "$stat"}],
+    ),
+    ParameterTestCase(
         compiled_query=(
-            Aggify(PostDocument).replace_root(embedded_field='stat')
+            Aggify(PostDocument).replace_with(
+                embedded_field="stat",
+                merge={"like_count": 0, "view_count": 0, "comment_count": 0},
+            )
         ),
         expected_query=[
-            {'$replaceRoot': {'$newRoot': '$stat'}}
+            {
+                "$replaceWith": {
+                    "$mergeObjects": [
+                        {"comment_count": 0, "like_count": 0, "view_count": 0},
+                        "$stat",
+                    ]
+                }
+            }
         ],
     ),
     ParameterTestCase(
         compiled_query=(
-            Aggify(PostDocument).replace_with(embedded_field='stat')
+            Aggify(PostDocument).replace_root(
+                embedded_field="stat",
+                merge={"like_count": 0, "view_count": 0, "comment_count": 0},
+            )
         ),
         expected_query=[
-            {'$replaceWith': '$stat'}
-        ],
-    ),
-    ParameterTestCase(
-        compiled_query=(
-            Aggify(PostDocument).replace_with(embedded_field='stat', merge={
-                "like_count": 0,
-                "view_count": 0,
-                "comment_count": 0
-            })
-        ),
-        expected_query=[
-            {'$replaceWith': {'$mergeObjects': [{'comment_count': 0,
-                                                 'like_count': 0,
-                                                 'view_count': 0},
-                                                '$stat']}}
-        ],
-    ),
-    ParameterTestCase(
-        compiled_query=(
-            Aggify(PostDocument).replace_root(embedded_field='stat', merge={
-                "like_count": 0,
-                "view_count": 0,
-                "comment_count": 0
-            })
-        ),
-        expected_query=[
-            {'$replaceRoot': {"newRoot": {'$mergeObjects': [{'comment_count': 0,
-                                                             'like_count': 0,
-                                                             'view_count': 0},
-                                                            '$stat']}}}
+            {
+                "$replaceRoot": {
+                    "newRoot": {
+                        "$mergeObjects": [
+                            {"comment_count": 0, "like_count": 0, "view_count": 0},
+                            "$stat",
+                        ]
+                    }
+                }
+            }
         ],
     ),
 ]
