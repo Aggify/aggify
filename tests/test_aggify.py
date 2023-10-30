@@ -261,6 +261,7 @@ class TestAggify:
             ("raw", ({"$query": "query"},)),
             ("add_fields", ({"$field": "value"},)),
             ("filter", (Q(age=20),)),
+            ("__getitem__", (slice(2, 10),))
         ),
     )
     def test_out_stage_error(self, method, args):

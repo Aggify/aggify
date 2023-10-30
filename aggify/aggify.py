@@ -199,6 +199,7 @@ class Aggify:
                     ]
                 )
 
+    @last_out_stage_check
     def __getitem__(self, index: slice | int) -> "Aggify":
         """
         # TODO: missing docs
