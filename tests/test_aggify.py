@@ -358,11 +358,12 @@ class TestAggify:
     @pytest.mark.parametrize(
         ("method", "args"),
         (
-                ("group", ("_id",)),
-                ("order_by", ("field",)),
-                ("raw", ({"$query": "query"},)),
-                ("add_fields", ({"$field": "value"},)),
-                ("filter", (Q(age=20),)),
+            ("group", ("_id",)),
+            ("order_by", ("field",)),
+            ("raw", ({"$query": "query"},)),
+            ("add_fields", ({"$field": "value"},)),
+            ("filter", (Q(age=20),)),
+            ("__getitem__", (slice(2, 10),))
         ),
     )
     def test_out_stage_error(self, method, args):
