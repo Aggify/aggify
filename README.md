@@ -75,21 +75,74 @@ query.filter(deleted_at=None, caption__contains='Aggify').order_by('-_id').looku
 Mongoengine equivalent query:
 
 ```python
-[{'$match': {'caption': {'$options': 'i', '$regex': '.*Aggify.*'},
-             'deleted_at': None}},
- {'$sort': {'_id': -1}},
- {'$lookup': {'as': 'owner',
-              'from': 'account',
-              'let': {'owner': '$owner_id'},
-              'pipeline': [{'$match': {'$expr': {'$and': [{'$eq': ['$_id',
-                                                                   '$$owner']},
-                                                          {'deleted_at': None}]}}},
-                           {'$match': {'$expr': {'$eq': ['$is_verified',
-                                                         True]}}}]}},
- {'$match': {'owner': {'$ne': []}}},
- {'$addFields': {'aggify': {'$literal': 'Aggify is lovely'}}},
- {'$project': {'caption': 0}},
- {'$out': 'post'}]
+[
+        {
+            '$match': {
+                'caption': {
+                    '$options': 'i',
+                    '$regex': '.*Aggify.*'
+                },
+                'deleted_at': None
+            }
+        },
+        {
+            '$sort': {
+                '_id': -1
+            }
+        },
+        {
+            '$lookup': {
+                'as': 'owner',
+                'from': 'account',
+                'let': {
+                    'owner': '$owner_id'
+                },
+                'pipeline': [
+                    {
+                        '$match': {
+                            '$expr': {
+                                '$and': [
+                                    {
+                                        '$eq': ['$_id', '$$owner']
+                                    },
+                                    {
+                                        'deleted_at': None
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        '$match': {
+                            '$expr': {
+                                '$eq': ['$is_verified', True]
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            '$match': {
+                'owner': {'$ne': []}
+            }
+        },
+        {
+            '$addFields': {
+                'aggify': {
+                    '$literal': 'Aggify is lovely'
+                }
+            }
+        },
+        {
+            '$project': {
+                'caption': 0
+                }
+        },
+        {
+            '$out': 'post'
+        }
+]
 ```
 
 In the sample usage above, you can see how Aggify simplifies the construction of MongoDB aggregation pipelines by
