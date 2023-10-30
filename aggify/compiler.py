@@ -250,8 +250,9 @@ class Match:
 
             field, operator, *_ = key.split("__")
             if self.is_base_model_field(field):
-                # TODO: find a better way instead of recursive function call
-                pipelines.append(self.compile([(key.replace("__", ".", 1), value)]))
+                pipelines.append(
+                    Match({key.replace("__", ".", 1): value}, self.base_model).compile([])
+                )
                 continue
 
             if operator not in Operators.ALL_OPERATORS:
