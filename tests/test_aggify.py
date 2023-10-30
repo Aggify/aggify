@@ -105,10 +105,10 @@ class TestAggify:
             "$gt": ["$age", 30]
         }
         assert (
-            aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["then"] == "Adult"
+                aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["then"] == "Adult"
         )
         assert (
-            aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["else"] == "Child"
+                aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["else"] == "Child"
         )
 
     # Test filtering using not operator
@@ -170,7 +170,7 @@ class TestAggify:
         with pytest.raises(AnnotationError) as err:
             Aggify(BaseModel).annotate("size", "sum", None)
 
-        assert "you're pipeline is empty" in err.__str__().lower()
+        assert "your pipeline is empty" in err.__str__().lower()
 
     def test_annotate_not_group_value_error(self):
         with pytest.raises(AnnotationError) as err:
@@ -185,16 +185,27 @@ class TestAggify:
     @pytest.mark.parametrize(
         "accumulator",
         (
-            "sum",
-            "avg",
-            "first",
-            "last",
-            "max",
-            "min",
-            "push",
-            "addToSet",
-            "stdDevPop",
-            "stdDevSamp",
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
         ),
     )
     def test_annotate_with_raw_f(self, accumulator):
@@ -206,16 +217,27 @@ class TestAggify:
     @pytest.mark.parametrize(
         "accumulator",
         (
-            "sum",
-            "avg",
-            "first",
-            "last",
-            "max",
-            "min",
-            "push",
-            "addToSet",
-            "stdDevPop",
-            "stdDevSamp",
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
         ),
     )
     def test_annotate_with_f(self, accumulator):
@@ -229,25 +251,105 @@ class TestAggify:
     @pytest.mark.parametrize(
         "accumulator",
         (
-            "sum",
-            "avg",
-            "first",
-            "last",
-            "max",
-            "min",
-            "push",
-            "addToSet",
-            "stdDevPop",
-            "stdDevSamp",
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
         ),
     )
     def test_annotate_raw_value(self, accumulator):
         aggify = Aggify(BaseModel)
+        thing = aggify.group().annotate("some_name", accumulator, "name")
+        assert len(thing.pipelines) == 1
+        assert thing.pipelines[-1]["$group"]["some_name"] == {
+            f"${accumulator}": "$name"
+        }
+
+    @pytest.mark.parametrize(
+        "accumulator",
+        (
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
+        ),
+    )
+    def test_annotate_raw_value_not_model_field(self, accumulator):
+        aggify = Aggify(BaseModel)
         thing = aggify.group().annotate("some_name", accumulator, "some_value")
         assert len(thing.pipelines) == 1
         assert thing.pipelines[-1]["$group"]["some_name"] == {
-            f"${accumulator}": "$some_value"
+            f"${accumulator}": "some_value"
         }
+
+    @pytest.mark.parametrize(
+        "accumulator",
+        (
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
+        ),
+    )
+    def test_annotate_add_annotated_field_to_base_model(self, accumulator):
+        aggify = Aggify(BaseModel)
+        thing = aggify.group().annotate("some_name", accumulator, "some_value")
+        assert len(thing.pipelines) == 1
+        assert thing.pipelines[-1]["$group"]["some_name"] == {
+            f"${accumulator}": "some_value"
+        }
+        assert aggify.filter(some_name=123).pipelines[-1] == {"$match": {"some_name": 123}}
 
     def test_out_with_project_stage_error(self):
         with pytest.raises(OutStageError):
