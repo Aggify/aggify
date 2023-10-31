@@ -5,6 +5,7 @@
     <em>Aggify is a Python library to generate MongoDB aggregation pipelines</em>
 </p>
 
+<p align="center">
 <a href="https://pypi.org/project/aggify" target="_blank">
     <img src="https://img.shields.io/pypi/v/aggify?color=%2334D058&label=pypi%20package" alt="Package version">
 </a>
@@ -17,6 +18,7 @@
 <a href="https://github.com/Aggify/aggify/graphs/contributors" target="_blank">
     <img src="https://img.shields.io/github/contributors/Aggify/aggify.svg" alt="contributors">
 </a>
+</p>
 
 # Aggify
 
