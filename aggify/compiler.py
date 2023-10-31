@@ -1,8 +1,10 @@
 from typing import Any, Type
 
 from mongoengine import Document, EmbeddedDocumentField
+from mongoengine.base import TopLevelDocumentMetaclass
 
 from aggify.exceptions import InvalidOperator
+from aggify.utilty import get_db_field
 
 
 class Operators:
@@ -232,15 +234,27 @@ class Match:
             raise InvalidOperator(operator)
 
     def is_base_model_field(self, field) -> bool:
-        return self.base_model is not None and isinstance(
-            self.base_model._fields.get(field),  # type: ignore # noqa
-            EmbeddedDocumentField,
+        """
+        Check if a field in the base model class is of a specific type.
+        EmbeddedDocumentField: Field which is embedded.
+        TopLevelDocumentMetaclass: Field which is added by lookup stage.
+
+        Args:
+            field (str): The name of the field to check.
+
+        Returns:
+            bool: True if the field is of type EmbeddedDocumentField or TopLevelDocumentMetaclass
+                  and the base_model is not None, otherwise False.
+        """
+        return self.base_model is not None and (
+            isinstance(self.base_model._fields.get(field), (EmbeddedDocumentField, TopLevelDocumentMetaclass))  # noqa
         )
 
     def compile(self, pipelines: list) -> dict[str, dict[str, list]]:
         match_query = {}
         for key, value in self.matches.items():
             if "__" not in key:
+                key = get_db_field(self.base_model, key)
                 match_query[key] = value
                 continue
 
@@ -249,7 +263,7 @@ class Match:
                     raise InvalidOperator(key)
 
             field, operator, *_ = key.split("__")
-            if self.is_base_model_field(field):
+            if self.is_base_model_field(field) and operator not in Operators.ALL_OPERATORS:
                 pipelines.append(
                     Match({key.replace("__", ".", 1): value}, self.base_model).compile(
                         []
@@ -259,7 +273,7 @@ class Match:
 
             if operator not in Operators.ALL_OPERATORS:
                 raise InvalidOperator(operator)
-
-            match_query = Operators(match_query).compile_match(operator, value, field)
+            db_field = get_db_field(self.base_model, field)
+            match_query = Operators(match_query).compile_match(operator, value, db_field)
 
         return {"$match": match_query}

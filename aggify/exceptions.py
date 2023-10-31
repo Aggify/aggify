@@ -59,3 +59,16 @@ class InvalidEmbeddedField(AggifyBaseException):
     def __init__(self, field: str):
         self.message = f"Field {field} is not embedded."
         super().__init__(self.message)
+
+
+class AlreadyExistsField(AggifyBaseException):
+    def __init__(self, field: str):
+        self.message = f"Field {field} already exists."
+        super().__init__(self.message)
+
+
+class InvalidArgument(AggifyBaseException):
+    def __init__(self, expected_list: list):
+        self.message = f"Input is not correctly passed, expected {[expected for expected in expected_list]}"
+        self.expecteds = expected_list
+        super().__init__(self.message)

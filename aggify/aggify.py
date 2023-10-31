@@ -1,7 +1,8 @@
 import functools
-from typing import Any, Literal, Dict, Type
+from typing import Any, Dict, Type
 
 from mongoengine import Document, EmbeddedDocument, fields
+from mongoengine.base import TopLevelDocumentMetaclass
 
 from aggify.compiler import F, Match, Q, Operators  # noqa keep
 from aggify.exceptions import (
@@ -10,6 +11,7 @@ from aggify.exceptions import (
     InvalidField,
     InvalidEmbeddedField,
     OutStageError,
+    InvalidArgument,
 )
 from aggify.types import QueryParams
 from aggify.utilty import (
@@ -17,6 +19,8 @@ from aggify.utilty import (
     check_fields_exist,
     replace_values_recursive,
     convert_match_query,
+    check_field_exists,
+    get_db_field,
 )
 
 
@@ -174,12 +178,17 @@ class Aggify:
             split_query = key.split("__")
 
             # Retrieve the field definition from the model.
-            join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore # noqa
-
+            join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore
             # Check conditions for creating a 'match' pipeline stage.
             if (
-                "document_type_obj" not in join_field.__dict__
-                or issubclass(join_field.document_type, EmbeddedDocument)
+                isinstance(
+                    join_field, TopLevelDocumentMetaclass
+                )  # check whether field is added by lookup stage or not
+                or "document_type_obj"
+                not in join_field.__dict__  # Check whether this field is a join field or not.
+                or issubclass(
+                    join_field.document_type, EmbeddedDocument
+                )  # Check whether this field is embedded field or not
                 or len(split_query) == 1
                 or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
             ):
@@ -191,7 +200,7 @@ class Aggify:
                     self.pipelines.append(match)
 
             else:
-                from_collection = join_field.document_type  # noqa
+                from_collection = join_field.document_type
                 local_field = join_field.db_field
                 as_name = join_field.name
                 matches = []
@@ -210,7 +219,7 @@ class Aggify:
                         as_name=as_name,
                     )
                 )
-                self.unwind(as_name)
+                self.unwind(as_name, preserve=True)
                 self.pipelines.extend([{"$match": match} for match in matches])
 
     @last_out_stage_check
@@ -356,7 +365,7 @@ class Aggify:
         else:
             if isinstance(f, str):
                 try:
-                    self.get_model_field(self.base_model, f)  # noqa
+                    self.get_model_field(self.base_model, f)
                     value = f"${f}"
                 except InvalidField:
                     value = f
@@ -429,66 +438,94 @@ class Aggify:
 
     @last_out_stage_check
     def lookup(
-        self, from_collection: Document, let: list[str], query: list[Q], as_name: str
+        self,
+        from_collection: Document,
+        as_name: str,
+        query: list[Q] | Q | None = None,
+        let: list[str] | None = None,
+        local_field: str | None = None,
+        foreign_field: str | None = None,
     ) -> "Aggify":
         """
         Generates a MongoDB lookup pipeline stage.
 
         Args:
-            from_collection (Document): The name of the collection to lookup.
-            let (list): The local field(s) to join on.
-            query (list[Q]): List of desired queries with Q function.
+            from_collection (Document): The document representing the collection to perform the lookup on.
             as_name (str): The name of the new field to create.
+            query (list[Q] | Q | None, optional): List of desired queries with Q function or a single query.
+            let (list[str] | None, optional): The local field(s) to join on. If provided, localField and foreignField are not used.
+            local_field (str | None, optional): The local field to join on when let is not provided.
+            foreign_field (str | None, optional): The foreign field to join on when let is not provided.
 
         Returns:
-            Aggify: A MongoDB lookup pipeline stage.
+            Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
         """
-        check_fields_exist(self.base_model, let)  # noqa
-
-        let_dict = {
-            field: f"${self.base_model._fields[field].db_field}"
-            for field in let  # noqa
-        }
-        from_collection = from_collection._meta.get("collection")  # noqa
 
         lookup_stages = []
+        check_field_exists(self.base_model, as_name)
+        from_collection_name = from_collection._meta.get("collection")  # noqa
 
-        for q in query:
-            # Construct the match stage for each query
-            if isinstance(q, Q):
-                replaced_values = replace_values_recursive(
-                    convert_match_query(dict(q)),  # noqa
-                    {field: f"$${field}" for field in let},
-                )
-                match_stage = {"$match": {"$expr": replaced_values.get("$match")}}
-                lookup_stages.append(match_stage)
-            elif isinstance(q, Aggify):
-                lookup_stages.extend(
-                    replace_values_recursive(
-                        convert_match_query(q.pipelines),  # noqa
+        if not let and not (local_field and foreign_field):
+            raise InvalidArgument(
+                expected_list=[["local_field", "foreign_field"], "let"]
+            )
+        elif not let:
+            if not (local_field and foreign_field):
+                raise InvalidArgument(expected_list=["local_field", "foreign_field"])
+            lookup_stage = {
+                "$lookup": {
+                    "from": from_collection_name,
+                    "localField": get_db_field(self.base_model, local_field),  # noqa
+                    "foreignField": get_db_field(
+                        from_collection, foreign_field
+                    ),  # noqa
+                    "as": as_name,
+                }
+            }
+        else:
+            if not query:
+                raise InvalidArgument(expected_list=["query"])
+            check_fields_exist(self.base_model, let)  # noqa
+            let_dict = {
+                field: f"${get_db_field(self.base_model, field)}"
+                for field in let  # noqa
+            }
+            for q in query:
+                # Construct the match stage for each query
+                if isinstance(q, Q):
+                    replaced_values = replace_values_recursive(
+                        convert_match_query(dict(q)),
                         {field: f"$${field}" for field in let},
                     )
-                )
+                    match_stage = {"$match": {"$expr": replaced_values.get("$match")}}
+                    lookup_stages.append(match_stage)
+                elif isinstance(q, Aggify):
+                    lookup_stages.extend(
+                        replace_values_recursive(
+                            convert_match_query(q.pipelines),  # noqa
+                            {field: f"$${field}" for field in let},
+                        )
+                    )
 
-        # Append the lookup stage with multiple match stages to the pipeline
-        lookup_stage = {
-            "$lookup": {
-                "from": from_collection,
-                "let": let_dict,
-                "pipeline": lookup_stages,  # List of match stages
-                "as": as_name,
+            # Append the lookup stage with multiple match stages to the pipeline
+            lookup_stage = {
+                "$lookup": {
+                    "from": from_collection_name,
+                    "let": let_dict,
+                    "pipeline": lookup_stages,  # List of match stages
+                    "as": as_name,
+                }
             }
-        }
 
         self.pipelines.append(lookup_stage)
 
         # Add this new field to base model fields, which we can use it in the next stages.
-        self.base_model._fields[as_name] = fields.StringField()  # noqa
+        self.base_model._fields[as_name] = from_collection  # noqa
 
         return self
 
     @staticmethod
-    def get_model_field(model: Document, field: str) -> fields:
+    def get_model_field(model: Type[Document], field: str) -> fields:
         """
         Get the field definition of a specified field in a MongoDB model.
 
@@ -520,7 +557,7 @@ class Aggify:
         Raises:
             InvalidEmbeddedField: If the specified embedded field is not found or is not of the correct type.
         """
-        model_field = self.get_model_field(self.base_model, embedded_field)  # noqa
+        model_field = self.get_model_field(self.base_model, embedded_field)
 
         if not hasattr(model_field, "document_type") or not issubclass(
             model_field.document_type, EmbeddedDocument
