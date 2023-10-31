@@ -1,3 +1,23 @@
+<p align="center">
+  <img src="https://i.imgur.com/LIcqDY1.png" alt="Aggify">
+</p>
+<p align="center">
+    <em>Aggify is a Python library to generate MongoDB aggregation pipelines</em>
+</p>
+
+<a href="https://pypi.org/project/aggify" target="_blank">
+    <img src="https://img.shields.io/pypi/v/aggify?color=%2334D058&label=pypi%20package" alt="Package version">
+</a>
+<a href="https://pypi.org/project/aggify" target="_blank">
+    <img src="https://img.shields.io/pypi/pyversions/aggify.svg?color=%2334D058" alt="Supported Python versions">
+</a>
+<a href="https://github.com/Aggify/aggify/blob/main/LICENSE" target="_blank">
+    <img src="https://img.shields.io/github/license/Aggify/aggify.svg" alt="license">
+</a>
+<a href="https://github.com/Aggify/aggify/graphs/contributors" target="_blank">
+    <img src="https://img.shields.io/github/contributors/Aggify/aggify.svg" alt="contributors">
+</a>
+
 # Aggify
 
 Aggify is a Python library for generating MongoDB aggregation pipelines, designed to work seamlessly with Mongoengine.
