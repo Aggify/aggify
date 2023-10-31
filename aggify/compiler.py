@@ -251,7 +251,7 @@ class Match:
                     raise InvalidOperator(key)
 
             field, operator, *_ = key.split("__")
-            if self.is_base_model_field(field):
+            if self.is_base_model_field(field) and operator not in Operators.ALL_OPERATORS:
                 pipelines.append(
                     Match({key.replace("__", ".", 1): value}, self.base_model).compile(
                         []
