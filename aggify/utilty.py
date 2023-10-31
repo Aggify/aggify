@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, Type
 
 from mongoengine import Document
 
-from aggify.exceptions import MongoIndexError, InvalidField
+from aggify.exceptions import MongoIndexError, InvalidField, AlreadyExistsField
 
 
 def int_to_slice(final_index: int) -> slice:
@@ -79,7 +79,7 @@ def replace_values_recursive(obj, replacements):
 
 
 def convert_match_query(
-    d: dict,
+        d: dict,
 ) -> dict[Any, list[str | Any] | dict] | list[dict] | dict:
     """
     Recursively transform a dictionary to modify the structure of '$eq' and '$ne' operators.
@@ -113,3 +113,36 @@ def convert_match_query(
         return [convert_match_query(item) for item in d]
     else:
         return d
+
+
+def check_field_exists(model: Type[Document], field: str) -> None:
+    """
+   Check if a field exists in the given model.
+
+   Args:
+       model (Document): The model to check for the field.
+       field (str): The name of the field to check.
+
+   Raises:
+       AlreadyExistsField: If the field already exists in the model.
+   """
+    if model._fields.get(field):  # noqa
+        raise AlreadyExistsField(field=field)
+
+
+def get_db_field(model: Type[Document], field: str) -> str:
+    """
+    Get the database field name for a given field in the model.
+
+    Args:
+        model (Document): The model containing the field.
+        field (str): The name of the field.
+
+    Returns:
+        str: The database field name if available, otherwise the original field name.
+    """
+    try:
+        db_field = model._fields.get(field).db_field  # noqa
+        return field if db_field is None else db_field
+    except AttributeError:
+        return field
