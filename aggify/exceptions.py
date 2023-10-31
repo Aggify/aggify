@@ -33,7 +33,6 @@ class OutStageError(InvalidPipelineStageError):
 
 
 class AggifyValueError(AggifyBaseException):
-
     def __init__(self, expected_list: list[Type], result: Type):
         self.message = (
             f"Input is not correctly passed, expected either of {[expected for expected in expected_list]}"
@@ -69,10 +68,7 @@ class AlreadyExistsField(AggifyBaseException):
 
 
 class InvalidArgument(AggifyBaseException):
-
     def __init__(self, expected_list: list):
-        self.message = (
-            f"Input is not correctly passed, expected {[expected for expected in expected_list]}"
-        )
+        self.message = f"Input is not correctly passed, expected {[expected for expected in expected_list]}"
         self.expecteds = expected_list
         super().__init__(self.message)

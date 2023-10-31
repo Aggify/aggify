@@ -234,6 +234,18 @@ class Match:
             raise InvalidOperator(operator)
 
     def is_base_model_field(self, field) -> bool:
+        """
+        Check if a field in the base model class is of a specific type.
+        EmbeddedDocumentField: Field which is embedded.
+        TopLevelDocumentMetaclass: Field which is added by lookup stage.
+
+        Args:
+            field (str): The name of the field to check.
+
+        Returns:
+            bool: True if the field is of type EmbeddedDocumentField or TopLevelDocumentMetaclass
+                  and the base_model is not None, otherwise False.
+        """
         return self.base_model is not None and (
             isinstance(self.base_model._fields.get(field), (EmbeddedDocumentField, TopLevelDocumentMetaclass))  # noqa
         )

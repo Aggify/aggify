@@ -10,14 +10,17 @@ from aggify.exceptions import (
     AnnotationError,
     InvalidField,
     InvalidEmbeddedField,
-    OutStageError, InvalidArgument,
+    OutStageError,
+    InvalidArgument,
 )
 from aggify.types import QueryParams
 from aggify.utilty import (
     to_mongo_positive_index,
     check_fields_exist,
     replace_values_recursive,
-    convert_match_query, check_field_exists, get_db_field,
+    convert_match_query,
+    check_field_exists,
+    get_db_field,
 )
 
 
@@ -178,11 +181,16 @@ class Aggify:
             join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore
             # Check conditions for creating a 'match' pipeline stage.
             if (
-                    isinstance(join_field, TopLevelDocumentMetaclass)
-                    or "document_type_obj" not in join_field.__dict__
-                    or issubclass(join_field.document_type, EmbeddedDocument)
-                    or len(split_query) == 1
-                    or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
+                isinstance(
+                    join_field, TopLevelDocumentMetaclass
+                )  # check whether field is added by lookup stage or not
+                or "document_type_obj"
+                not in join_field.__dict__  # Check whether this field is a join field or not.
+                or issubclass(
+                    join_field.document_type, EmbeddedDocument
+                )  # Check whether this field is embedded field or not
+                or len(split_query) == 1
+                or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
             ):
                 # Create a 'match' pipeline stage.
                 match = self.__match({key: value})
@@ -229,7 +237,7 @@ class Aggify:
 
     @last_out_stage_check
     def unwind(
-            self, path: str, include_index_array: str | None = None, preserve: bool = False
+        self, path: str, include_index_array: str | None = None, preserve: bool = False
     ) -> "Aggify":
         """Generates a MongoDB unwind pipeline stage.
 
@@ -287,7 +295,7 @@ class Aggify:
         return self.base_model.objects.aggregate(*self.pipelines)  # type: ignore
 
     def annotate(
-            self, annotate_name: str, accumulator: str, f: str | dict | F | int
+        self, annotate_name: str, accumulator: str, f: str | dict | F | int
     ) -> "Aggify":
         """
         Annotate a MongoDB aggregation pipeline with a new field.
@@ -383,7 +391,7 @@ class Aggify:
 
     @staticmethod
     def __lookup(
-            from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
+        from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
     ) -> dict[str, dict[str, str]]:
         """
         Generates a MongoDB lookup pipeline stage.
@@ -430,8 +438,13 @@ class Aggify:
 
     @last_out_stage_check
     def lookup(
-            self, from_collection: Document, as_name: str, query: list[Q] | Q | None = None,
-            let: list[str] | None = None, local_field: str | None = None, foreign_field: str | None = None
+        self,
+        from_collection: Document,
+        as_name: str,
+        query: list[Q] | Q | None = None,
+        let: list[str] | None = None,
+        local_field: str | None = None,
+        foreign_field: str | None = None,
     ) -> "Aggify":
         """
         Generates a MongoDB lookup pipeline stage.
@@ -453,21 +466,25 @@ class Aggify:
         from_collection_name = from_collection._meta.get("collection")  # noqa
 
         if not let and not (local_field and foreign_field):
-            raise InvalidArgument(expected_list=[['local_field', 'foreign_field'], 'let'])
+            raise InvalidArgument(
+                expected_list=[["local_field", "foreign_field"], "let"]
+            )
         elif not let:
             if not (local_field and foreign_field):
-                raise InvalidArgument(expected_list=['local_field', 'foreign_field'])
+                raise InvalidArgument(expected_list=["local_field", "foreign_field"])
             lookup_stage = {
                 "$lookup": {
                     "from": from_collection_name,
-                    'localField': get_db_field(self.base_model, local_field),  # noqa
-                    'foreignField': get_db_field(from_collection, foreign_field), # noqa
+                    "localField": get_db_field(self.base_model, local_field),  # noqa
+                    "foreignField": get_db_field(
+                        from_collection, foreign_field
+                    ),  # noqa
                     "as": as_name,
                 }
             }
         else:
             if not query:
-                raise InvalidArgument(expected_list=['query'])
+                raise InvalidArgument(expected_list=["query"])
             check_fields_exist(self.base_model, let)  # noqa
             let_dict = {
                 field: f"${get_db_field(self.base_model, field)}"
@@ -543,7 +560,7 @@ class Aggify:
         model_field = self.get_model_field(self.base_model, embedded_field)
 
         if not hasattr(model_field, "document_type") or not issubclass(
-                model_field.document_type, EmbeddedDocument
+            model_field.document_type, EmbeddedDocument
         ):
             raise InvalidEmbeddedField(field=embedded_field)
 
@@ -551,7 +568,7 @@ class Aggify:
 
     @last_out_stage_check
     def replace_root(
-            self, *, embedded_field: str, merge: dict | None = None
+        self, *, embedded_field: str, merge: dict | None = None
     ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
@@ -579,7 +596,7 @@ class Aggify:
 
     @last_out_stage_check
     def replace_with(
-            self, *, embedded_field: str, merge: dict | None = None
+        self, *, embedded_field: str, merge: dict | None = None
     ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.

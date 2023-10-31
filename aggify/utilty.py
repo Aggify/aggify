@@ -79,7 +79,7 @@ def replace_values_recursive(obj, replacements):
 
 
 def convert_match_query(
-        d: dict,
+    d: dict,
 ) -> dict[Any, list[str | Any] | dict] | list[dict] | dict:
     """
     Recursively transform a dictionary to modify the structure of '$eq' and '$ne' operators.
@@ -117,15 +117,15 @@ def convert_match_query(
 
 def check_field_exists(model: Type[Document], field: str) -> None:
     """
-   Check if a field exists in the given model.
+    Check if a field exists in the given model.
 
-   Args:
-       model (Document): The model to check for the field.
-       field (str): The name of the field to check.
+    Args:
+        model (Document): The model to check for the field.
+        field (str): The name of the field to check.
 
-   Raises:
-       AlreadyExistsField: If the field already exists in the model.
-   """
+    Raises:
+        AlreadyExistsField: If the field already exists in the model.
+    """
     if model._fields.get(field):  # noqa
         raise AlreadyExistsField(field=field)
 
