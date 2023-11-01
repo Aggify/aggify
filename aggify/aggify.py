@@ -87,7 +87,7 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def add_fields(self, **fields) -> "Aggify":  # noqa
+    def add_fields(self, **_fields) -> "Aggify":  # noqa
         """
         Generates a MongoDB addFields pipeline stage.
 
@@ -99,7 +99,8 @@ class Aggify:
         """
         add_fields_stage = {"$addFields": {}}
 
-        for field, expression in fields.items():
+        for field, expression in _fields.items():
+            field = field.replace("__", ".")
             if isinstance(expression, str):
                 add_fields_stage["$addFields"][field] = {"$literal": expression}
             elif isinstance(expression, F):
@@ -108,6 +109,8 @@ class Aggify:
                 add_fields_stage["$addFields"][field] = dict(expression)
             else:
                 raise AggifyValueError([str, F], type(expression))
+            # TODO: Should be checked if new field is embedded, create embedded field.
+            self.base_model._fields[field.replace("$", "")] = fields.IntField  # noqa
 
         self.pipelines.append(add_fields_stage)
         return self
