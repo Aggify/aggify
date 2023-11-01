@@ -63,7 +63,48 @@ class Aggify:
 
     @last_out_stage_check
     def project(self, **kwargs: QueryParams) -> "Aggify":
+        """
+        Adjusts the base model's fields based on the given keyword arguments.
+
+        Fields to be retained are set to 1 in kwargs.
+        Fields to be deleted are set to 0 in kwargs, except for _id which is controlled by the delete_id flag.
+
+        Args:
+            **kwargs: Fields to be retained or removed.
+                      For example: {"field1": 1, "field2": 0}
+                      _id field behavior: {"_id": 0} means delete _id.
+
+        Returns:
+            Aggify: Returns an instance of the Aggify class for potential method chaining.
+        """
+
+        # Extract fields to keep and check if _id should be deleted
+        to_keep_values = ["id"]
+        delete_id = kwargs.get("_id") == 0
+
+        # Add missing fields to the base model
+        for key, value in kwargs.items():
+            if value == 1:
+                to_keep_values.append(key)
+            elif key not in self.base_model._fields and isinstance(  # noqa
+                    kwargs[key], str
+            ):  # noqa
+                to_keep_values.append(key)
+                self.base_model._fields[key] = fields.IntField  # noqa
+
+        # Remove fields from the base model, except the ones in to_keep_values and possibly _id
+        keys_for_deletion = set(self.base_model._fields.keys()) - set(  # noqa
+            to_keep_values
+        )  # noqa
+        if delete_id:
+            keys_for_deletion.add("id")
+        for key in keys_for_deletion:
+            del self.base_model._fields[key]  # noqa
+
+        # Append the projection stage to the pipelines
         self.pipelines.append({"$project": kwargs})
+
+        # Return the instance for method chaining
         return self
 
     @last_out_stage_check
@@ -191,16 +232,16 @@ class Aggify:
             join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore
             # Check conditions for creating a 'match' pipeline stage.
             if (
-                isinstance(
-                    join_field, TopLevelDocumentMetaclass
-                )  # check whether field is added by lookup stage or not
-                or "document_type_obj"
-                not in join_field.__dict__  # Check whether this field is a join field or not.
-                or issubclass(
-                    join_field.document_type, EmbeddedDocument
-                )  # Check whether this field is embedded field or not
-                or len(split_query) == 1
-                or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
+                    isinstance(
+                        join_field, TopLevelDocumentMetaclass
+                    )  # check whether field is added by lookup stage or not
+                    or "document_type_obj"
+                    not in join_field.__dict__  # Check whether this field is a join field or not.
+                    or issubclass(
+                join_field.document_type, EmbeddedDocument
+            )  # Check whether this field is embedded field or not
+                    or len(split_query) == 1
+                    or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
             ):
                 # Create a 'match' pipeline stage.
                 match = self.__match({key: value})
@@ -247,7 +288,7 @@ class Aggify:
 
     @last_out_stage_check
     def unwind(
-        self, path: str, include_index_array: str | None = None, preserve: bool = False
+            self, path: str, include_index_array: str | None = None, preserve: bool = False
     ) -> "Aggify":
         """Generates a MongoDB unwind pipeline stage.
 
@@ -305,7 +346,7 @@ class Aggify:
         return self.base_model.objects.aggregate(*self.pipelines)  # type: ignore
 
     def annotate(
-        self, annotate_name: str, accumulator: str, f: str | dict | F | int
+            self, annotate_name: str, accumulator: str, f: str | dict | F | int
     ) -> "Aggify":
         """
         Annotate a MongoDB aggregation pipeline with a new field.
@@ -401,7 +442,7 @@ class Aggify:
 
     @staticmethod
     def __lookup(
-        from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
+            from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
     ) -> dict[str, dict[str, str]]:
         """
         Generates a MongoDB lookup pipeline stage.
@@ -448,13 +489,13 @@ class Aggify:
 
     @last_out_stage_check
     def lookup(
-        self,
-        from_collection: Document,
-        as_name: str,
-        query: list[Q] | Q | None = None,
-        let: list[str] | None = None,
-        local_field: str | None = None,
-        foreign_field: str | None = None,
+            self,
+            from_collection: Document,
+            as_name: str,
+            query: list[Q] | Q | None = None,
+            let: list[str] | None = None,
+            local_field: str | None = None,
+            foreign_field: str | None = None,
     ) -> "Aggify":
         """
         Generates a MongoDB lookup pipeline stage.
@@ -570,7 +611,7 @@ class Aggify:
         model_field = self.get_model_field(self.base_model, embedded_field)
 
         if not hasattr(model_field, "document_type") or not issubclass(
-            model_field.document_type, EmbeddedDocument
+                model_field.document_type, EmbeddedDocument
         ):
             raise InvalidEmbeddedField(field=embedded_field)
 
@@ -578,7 +619,7 @@ class Aggify:
 
     @last_out_stage_check
     def replace_root(
-        self, *, embedded_field: str, merge: dict | None = None
+            self, *, embedded_field: str, merge: dict | None = None
     ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
@@ -606,7 +647,7 @@ class Aggify:
 
     @last_out_stage_check
     def replace_with(
-        self, *, embedded_field: str, merge: dict | None = None
+            self, *, embedded_field: str, merge: dict | None = None
     ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
