@@ -52,7 +52,10 @@ class Aggify:
         Args:
             base_model: The base model class.
         """
-        self.base_model = base_model
+        # Create a separate copy of the main class for safety and flexibility
+        self.base_model = type(
+            "Aggify_base_model", base_model.__bases__, dict(base_model.__dict__)
+        )
         self.pipelines: list[dict[str, dict | Any]] = []
         self.start = None
         self.stop = None
