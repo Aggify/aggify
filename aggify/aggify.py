@@ -91,7 +91,7 @@ class Aggify:
             if value == 1:
                 to_keep_values.append(key)
             elif key not in self.base_model._fields and isinstance(  # noqa
-                kwargs[key], str
+                kwargs[key], (str, dict)
             ):  # noqa
                 to_keep_values.append(key)
                 self.base_model._fields[key] = fields.IntField()  # noqa
@@ -168,13 +168,12 @@ class Aggify:
         if arg is not None and isinstance(arg, Q) is not True:
             raise AggifyValueError([Q, None], type(arg))
 
-        if arg is None:
-            self.q = kwargs
-            self.__to_aggregate(self.q)
-            self.pipelines = self.__combine_sequential_matches()
-
         if isinstance(arg, Q):
             self.pipelines.append(dict(arg))
+
+        self.q = kwargs
+        self.__to_aggregate(self.q)
+        self.pipelines = self.__combine_sequential_matches()
 
         return self
 
