@@ -63,7 +63,48 @@ class Aggify:
 
     @last_out_stage_check
     def project(self, **kwargs: QueryParams) -> "Aggify":
+        """
+        Adjusts the base model's fields based on the given keyword arguments.
+
+        Fields to be retained are set to 1 in kwargs.
+        Fields to be deleted are set to 0 in kwargs, except for _id which is controlled by the delete_id flag.
+
+        Args:
+            **kwargs: Fields to be retained or removed.
+                      For example: {"field1": 1, "field2": 0}
+                      _id field behavior: {"_id": 0} means delete _id.
+
+        Returns:
+            Aggify: Returns an instance of the Aggify class for potential method chaining.
+        """
+
+        # Extract fields to keep and check if _id should be deleted
+        to_keep_values = ["id"]
+        delete_id = kwargs.get("_id") == 0
+
+        # Add missing fields to the base model
+        for key, value in kwargs.items():
+            if value == 1:
+                to_keep_values.append(key)
+            elif key not in self.base_model._fields and isinstance(  # noqa
+                kwargs[key], str
+            ):  # noqa
+                to_keep_values.append(key)
+                self.base_model._fields[key] = fields.IntField()  # noqa
+
+        # Remove fields from the base model, except the ones in to_keep_values and possibly _id
+        keys_for_deletion = set(self.base_model._fields.keys()) - set(  # noqa
+            to_keep_values
+        )  # noqa
+        if delete_id:
+            keys_for_deletion.add("id")
+        for key in keys_for_deletion:
+            del self.base_model._fields[key]  # noqa
+
+        # Append the projection stage to the pipelines
         self.pipelines.append({"$project": kwargs})
+
+        # Return the instance for method chaining
         return self
 
     @last_out_stage_check
@@ -87,7 +128,7 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def add_fields(self, **fields) -> "Aggify":  # noqa
+    def add_fields(self, **_fields) -> "Aggify":  # noqa
         """
         Generates a MongoDB addFields pipeline stage.
 
@@ -99,7 +140,8 @@ class Aggify:
         """
         add_fields_stage = {"$addFields": {}}
 
-        for field, expression in fields.items():
+        for field, expression in _fields.items():
+            field = field.replace("__", ".")
             if isinstance(expression, str):
                 add_fields_stage["$addFields"][field] = {"$literal": expression}
             elif isinstance(expression, F):
@@ -108,6 +150,8 @@ class Aggify:
                 add_fields_stage["$addFields"][field] = dict(expression)
             else:
                 raise AggifyValueError([str, F], type(expression))
+            # TODO: Should be checked if new field is embedded, create embedded field.
+            self.base_model._fields[field.replace("$", "")] = fields.IntField()  # noqa
 
         self.pipelines.append(add_fields_stage)
         return self

@@ -115,7 +115,7 @@ class Q:
 class F:
     def __init__(self, field: str | dict[str, list]):
         if isinstance(field, str):
-            self.field = f"${field}"
+            self.field = f"${field.replace('__', '.')}"
         else:
             self.field = field
 
