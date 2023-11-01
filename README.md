@@ -9,15 +9,23 @@
 <a href="https://pypi.org/project/aggify" target="_blank">
     <img src="https://img.shields.io/pypi/v/aggify?color=%2334D058&label=pypi%20package" alt="Package version">
 </a>
+
 <a href="https://pypi.org/project/aggify" target="_blank">
     <img src="https://img.shields.io/pypi/dm/aggify" alt="Downloads">
 </a>
+
 <a href="https://pypi.org/project/aggify" target="_blank">
     <img src="https://img.shields.io/pypi/pyversions/aggify.svg?color=%2334D058" alt="Supported Python versions">
 </a>
+
+<a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/Aggify/aggify" target="_blank">
+    <img src="https://img.shields.io/codecov/c/github/Aggify/aggify" alt="Coverage">
+</a>
+
 <a href="https://github.com/Aggify/aggify/blob/main/LICENSE" target="_blank">
     <img src="https://img.shields.io/github/license/Aggify/aggify.svg" alt="license">
 </a>
+
 <a href="https://github.com/Aggify/aggify/graphs/contributors" target="_blank">
     <img src="https://img.shields.io/github/contributors/Aggify/aggify.svg" alt="contributors">
 </a>
@@ -174,3 +182,4 @@ Mongoengine equivalent query:
 In the sample usage above, you can see how Aggify simplifies the construction of MongoDB aggregation pipelines by
 allowing you to chain filters, lookups, and other operations to build complex queries.
 For more details and examples, please refer to the documentation and codebase.
+
