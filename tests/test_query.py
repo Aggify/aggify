@@ -185,14 +185,14 @@ cases = [
                     Q(_id__ne="owner") & Q(username__ne="seyed"),
                 ],
                 let=["owner"],
-                as_name="_posts1",
+                as_name="_posts",
             )
-            .filter(_posts1__ne=[])
+            .filter(_posts__ne=[])
         ),
         expected_query=[
             {
                 "$lookup": {
-                    "as": "_posts1",
+                    "as": "_posts",
                     "from": "account",
                     "let": {"owner": "$owner_id"},
                     "pipeline": [
@@ -209,7 +209,7 @@ cases = [
                     ],
                 }
             },
-            {"$match": {"_posts1": {"$ne": []}}},
+            {"$match": {"_posts": {"$ne": []}}},
         ],
     ),
     ParameterTestCase(
@@ -219,14 +219,14 @@ cases = [
                 AccountDocument,
                 query=[Q(_id__exact="owner"), Q(username__exact="caption")],  # noqa
                 let=["owner", "caption"],
-                as_name="_posts2",
+                as_name="_posts",
             )
-            .filter(_posts2__ne=[])
+            .filter(_posts__ne=[])
         ),
         expected_query=[
             {
                 "$lookup": {
-                    "as": "_posts2",
+                    "as": "_posts",
                     "from": "account",
                     "let": {"caption": "$caption", "owner": "$owner_id"},
                     "pipeline": [
@@ -235,7 +235,7 @@ cases = [
                     ],
                 }
             },
-            {"$match": {"_posts2": {"$ne": []}}},
+            {"$match": {"_posts": {"$ne": []}}},
         ],
     ),
     ParameterTestCase(
@@ -311,20 +311,20 @@ cases = [
                 AccountDocument,
                 local_field="owner",
                 foreign_field="id",
-                as_name="_owner1",
+                as_name="_owner",
             )
-            .filter(_owner1__username="Aggify")
+            .filter(_owner__username="Aggify")
         ),
         expected_query=[
             {
                 "$lookup": {
-                    "as": "_owner1",
+                    "as": "_owner",
                     "foreignField": "_id",
                     "from": "account",
                     "localField": "owner_id",
                 }
             },
-            {"$match": {"_owner1.username": "Aggify"}},
+            {"$match": {"_owner.username": "Aggify"}},
         ],
     ),
 ]

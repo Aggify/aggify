@@ -249,9 +249,9 @@ class Match:
         """
         return self.base_model is not None and (
             isinstance(
-                self.base_model._fields.get(field),
+                self.base_model._fields.get(field),  # noqa
                 (EmbeddedDocumentField, TopLevelDocumentMetaclass),
-            )  # noqa
+            )
         )
 
     def compile(self, pipelines: list) -> dict[str, dict[str, list]]:
