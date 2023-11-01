@@ -230,7 +230,8 @@ class Match:
 
     @staticmethod
     def validate_operator(key: str):
-        if (operator := key.rsplit("__", 1)[1]) not in Operators.COMPARISON_OPERATORS:
+        operator = key.rsplit("__", 1)[1]
+        if operator not in Operators.COMPARISON_OPERATORS:
             raise InvalidOperator(operator)
 
     def is_base_model_field(self, field) -> bool:

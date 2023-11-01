@@ -34,7 +34,7 @@ def last_out_stage_check(method):
     @functools.wraps(method)
     def decorator(*args, **kwargs):
         try:
-            if last_is_out := bool(args[0].pipelines[-1].get("$out")):
+            if bool(args[0].pipelines[-1].get("$out")):
                 raise OutStageError(method.__name__)
         except IndexError:
             return method(*args, **kwargs)
