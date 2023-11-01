@@ -5,32 +5,12 @@
     <em>Aggify is a Python library to generate MongoDB aggregation pipelines</em>
 </p>
 
-<p align="center">
-<a href="https://pypi.org/project/aggify" target="_blank">
-    <img src="https://img.shields.io/pypi/v/aggify?color=%2334D058&label=pypi%20package" alt="Package version">
-</a>
-
-<a href="https://pypi.org/project/aggify" target="_blank">
-    <img src="https://img.shields.io/pypi/dm/aggify" alt="Downloads">
-</a>
-
-<a href="https://pypi.org/project/aggify" target="_blank">
-    <img src="https://img.shields.io/pypi/pyversions/aggify.svg?color=%2334D058" alt="Supported Python versions">
-</a>
-
-<a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/Aggify/aggify" target="_blank">
-    <img src="https://img.shields.io/codecov/c/github/Aggify/aggify" alt="Coverage">
-</a>
-
-<a href="https://github.com/Aggify/aggify/blob/main/LICENSE" target="_blank">
-    <img src="https://img.shields.io/github/license/Aggify/aggify.svg" alt="license">
-</a>
-
-<a href="https://github.com/Aggify/aggify/graphs/contributors" target="_blank">
-    <img src="https://img.shields.io/github/contributors/Aggify/aggify.svg" alt="contributors">
-</a>
-
-</p>
+[![Package version](https://img.shields.io/pypi/v/aggify?color=%2334D058&label=pypi%20package)](https://pypi.org/project/aggify)
+[![Downloads](https://img.shields.io/pypi/dm/aggify)](https://pypi.org/project/aggify)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/aggify.svg?color=%2334D058)](https://pypi.org/project/aggify)
+[![Coverage](https://img.shields.io/codecov/c/github/Aggify/aggify)](https://coverage-badge.samuelcolvin.workers.dev/redirect/Aggify/aggify)
+[![License](https://img.shields.io/github/license/Aggify/aggify.svg)](https://github.com/Aggify/aggify/blob/main/LICENSE)
+[![Contributors](https://img.shields.io/github/contributors/Aggify/aggify.svg)](https://github.com/Aggify/aggify/graphs/contributors)
 
 # Aggify
 
