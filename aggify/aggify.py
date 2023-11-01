@@ -76,7 +76,7 @@ class Aggify:
         Args:
             **kwargs: Fields to be retained or removed.
                       For example: {"field1": 1, "field2": 0}
-                      _id field behavior: {"_id": 0} means delete _id.
+                      _id field behavior: {"id": 0} means delete _id.
 
         Returns:
             Aggify: Returns an instance of the Aggify class for potential method chaining.
@@ -84,17 +84,19 @@ class Aggify:
 
         # Extract fields to keep and check if _id should be deleted
         to_keep_values = ["id"]
-        delete_id = kwargs.get("_id") == 0
+        delete_id = kwargs.get("id") == 0
+        projection = {}
 
         # Add missing fields to the base model
         for key, value in kwargs.items():
             if value == 1:
                 to_keep_values.append(key)
             elif key not in self.base_model._fields and isinstance(  # noqa
-                kwargs[key], str
+                kwargs[key], (str, dict)
             ):  # noqa
                 to_keep_values.append(key)
                 self.base_model._fields[key] = fields.IntField()  # noqa
+            projection[get_db_field(self.base_model, key)] = value  # noqa
 
         # Remove fields from the base model, except the ones in to_keep_values and possibly _id
         keys_for_deletion = set(self.base_model._fields.keys()) - set(  # noqa
@@ -106,7 +108,7 @@ class Aggify:
             del self.base_model._fields[key]  # noqa
 
         # Append the projection stage to the pipelines
-        self.pipelines.append({"$project": kwargs})
+        self.pipelines.append({"$project": projection})
 
         # Return the instance for method chaining
         return self
@@ -168,13 +170,12 @@ class Aggify:
         if arg is not None and isinstance(arg, Q) is not True:
             raise AggifyValueError([Q, None], type(arg))
 
-        if arg is None:
-            self.q = kwargs
-            self.__to_aggregate(self.q)
-            self.pipelines = self.__combine_sequential_matches()
-
         if isinstance(arg, Q):
             self.pipelines.append(dict(arg))
+
+        self.q = kwargs
+        self.__to_aggregate(self.q)
+        self.pipelines = self.__combine_sequential_matches()
 
         return self
 
