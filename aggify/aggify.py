@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, Type
+from typing import Any, Dict, Type, Union, List
 
 from mongoengine import Document, EmbeddedDocument, fields
 from mongoengine.base import TopLevelDocumentMetaclass
@@ -56,7 +56,7 @@ class Aggify:
         self.base_model = type(
             "Aggify_base_model", base_model.__bases__, dict(base_model.__dict__)
         )
-        self.pipelines: list[dict[str, dict | Any]] = []
+        self.pipelines: List[Dict[str, Union[dict, Any]]] = []
         self.start = None
         self.stop = None
         self.q = None
@@ -112,13 +112,13 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def group(self, expression: str | None = "_id") -> "Aggify":
+    def group(self, expression: Union[str, None] = "_id") -> "Aggify":
         expression = f"${expression}" if expression else None
         self.pipelines.append({"$group": {"_id": expression}})
         return self
 
     @last_out_stage_check
-    def order_by(self, *fields: str | list[str]) -> "Aggify":
+    def order_by(self, *fields: Union[str, List[str]]) -> "Aggify":
         sort_dict = {
             field.replace("-", ""): -1 if field.startswith("-") else 1
             for field in fields
@@ -137,7 +137,7 @@ class Aggify:
         Generates a MongoDB addFields pipeline stage.
 
         Args:
-            fields: A dictionary of field expressions and values.
+            _fields: A dictionary of field expressions and values.
 
         Returns:
             A MongoDB add_fields pipeline stage.
@@ -161,7 +161,7 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def filter(self, arg: Q | None = None, **kwargs: QueryParams) -> "Aggify":
+    def filter(self, arg: Union[Q, None] = None, **kwargs: QueryParams) -> "Aggify":
         """
         # TODO: missing docs
         """
@@ -178,7 +178,7 @@ class Aggify:
 
         return self
 
-    def out(self, coll: str, db: str | None = None) -> "Aggify":
+    def out(self, coll: str, db: Union[str, None] = None) -> "Aggify":
         """Write the documents returned by the aggregation pipeline into specified collection.
 
         Starting in MongoDB 4.4, you can specify the output database.
@@ -219,7 +219,7 @@ class Aggify:
         self.pipelines.append(stage)
         return self
 
-    def __to_aggregate(self, query: dict[str, Any]) -> None:
+    def __to_aggregate(self, query: Dict[str, Any]) -> None:
         """
         Builds the pipelines list based on the query parameters.
         """
@@ -242,7 +242,7 @@ class Aggify:
                 or "document_type_obj"
                 not in join_field.__dict__  # Check whether this field is a join field or not.
                 or issubclass(
-                    join_field.document_type, EmbeddedDocument
+                    join_field.document_type, EmbeddedDocument  # noqa
                 )  # Check whether this field is embedded field or not
                 or len(split_query) == 1
                 or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
@@ -278,7 +278,7 @@ class Aggify:
                 self.pipelines.extend([{"$match": match} for match in matches])
 
     @last_out_stage_check
-    def __getitem__(self, index: slice | int) -> "Aggify":
+    def __getitem__(self, index: Union[slice, int]) -> "Aggify":
         """
         # TODO: missing docs
         """
@@ -292,7 +292,10 @@ class Aggify:
 
     @last_out_stage_check
     def unwind(
-        self, path: str, include_index_array: str | None = None, preserve: bool = False
+        self,
+        path: str,
+        include_index_array: Union[str, None] = None,
+        preserve: bool = False,
     ) -> "Aggify":
         """Generates a MongoDB unwind pipeline stage.
 
@@ -350,7 +353,7 @@ class Aggify:
         return self.base_model.objects.aggregate(*self.pipelines)  # type: ignore
 
     def annotate(
-        self, annotate_name: str, accumulator: str, f: str | dict | F | int
+        self, annotate_name: str, accumulator: str, f: Union[Union[str, Dict], F, int]
     ) -> "Aggify":
         """
         Annotate a MongoDB aggregation pipeline with a new field.
@@ -359,7 +362,7 @@ class Aggify:
         Args:
             annotate_name (str): The name of the new annotated field.
             accumulator (str): The aggregation accumulator operator (e.g., "$sum", "$avg").
-            f (str | dict | F | int): The value for the annotated field.
+            f (Union[str, Dict] | F | int): The value for the annotated field.
 
         Returns:
             self.
@@ -420,7 +423,7 @@ class Aggify:
         else:
             if isinstance(f, str):
                 try:
-                    self.get_model_field(self.base_model, f)
+                    self.get_model_field(self.base_model, f)  # noqa
                     value = f"${f}"
                 except InvalidField:
                     value = f
@@ -428,11 +431,11 @@ class Aggify:
                 value = f
 
         # Determine the data type based on the aggregation operator
-        self.pipelines[-1]["$group"] |= {annotate_name: {acc: value}}
+        self.pipelines[-1]["$group"].update({annotate_name: {acc: value}})
         self.base_model._fields[annotate_name] = field_type  # noqa
         return self
 
-    def __match(self, matches: dict[str, Any]):
+    def __match(self, matches: Dict[str, Any]):
         """
         Generates a MongoDB match pipeline stage.
 
@@ -442,12 +445,12 @@ class Aggify:
         Returns:
             A MongoDB match pipeline stage.
         """
-        return Match(matches, self.base_model).compile(self.pipelines)
+        return Match(matches, self.base_model).compile(self.pipelines)  # noqa
 
     @staticmethod
     def __lookup(
         from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
-    ) -> dict[str, dict[str, str]]:
+    ) -> Dict[str, Dict[str, str]]:
         """
         Generates a MongoDB lookup pipeline stage.
 
@@ -469,7 +472,7 @@ class Aggify:
             }
         }
 
-    def __combine_sequential_matches(self) -> list[dict[str, dict | Any]]:
+    def __combine_sequential_matches(self) -> List[Dict[str, Union[dict, Any]]]:
         merged_pipeline = []
         match_stage = None
 
@@ -496,10 +499,10 @@ class Aggify:
         self,
         from_collection: Document,
         as_name: str,
-        query: list[Q] | Q | None = None,
-        let: list[str] | None = None,
-        local_field: str | None = None,
-        foreign_field: str | None = None,
+        query: Union[List[Q], Union[Q, None]] = None,
+        let: Union[List[str], None] = None,
+        local_field: Union[str, None] = None,
+        foreign_field: Union[str, None] = None,
     ) -> "Aggify":
         """
         Generates a MongoDB lookup pipeline stage.
@@ -507,17 +510,17 @@ class Aggify:
         Args:
             from_collection (Document): The document representing the collection to perform the lookup on.
             as_name (str): The name of the new field to create.
-            query (list[Q] | Q | None, optional): List of desired queries with Q function or a single query.
-            let (list[str] | None, optional): The local field(s) to join on. If provided, localField and foreignField are not used.
-            local_field (str | None, optional): The local field to join on when let is not provided.
-            foreign_field (str | None, optional): The foreign field to join on when let is not provided.
+            query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
+            let (Union[List[str], None], optional): The local field(s) to join on. If provided, localField and foreignField are not used.
+            local_field (Union[str, None], optional): The local field to join on when let is not provided.
+            foreign_field (Union[str, None], optional): The foreign field to join on when let is not provided.
 
         Returns:
             Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
         """
 
         lookup_stages = []
-        check_field_exists(self.base_model, as_name)
+        check_field_exists(self.base_model, as_name)  # noqa
         from_collection_name = from_collection._meta.get("collection")  # noqa
 
         if not let and not (local_field and foreign_field):
@@ -532,8 +535,8 @@ class Aggify:
                     "from": from_collection_name,
                     "localField": get_db_field(self.base_model, local_field),  # noqa
                     "foreignField": get_db_field(
-                        from_collection, foreign_field
-                    ),  # noqa
+                        from_collection, foreign_field  # noqa
+                    ),
                     "as": as_name,
                 }
             }
@@ -542,7 +545,7 @@ class Aggify:
                 raise InvalidArgument(expected_list=["query"])
             check_fields_exist(self.base_model, let)  # noqa
             let_dict = {
-                field: f"${get_db_field(self.base_model, field)}"
+                field: f"${get_db_field(self.base_model, field)}"  # noqa
                 for field in let  # noqa
             }
             for q in query:
@@ -612,7 +615,7 @@ class Aggify:
         Raises:
             InvalidEmbeddedField: If the specified embedded field is not found or is not of the correct type.
         """
-        model_field = self.get_model_field(self.base_model, embedded_field)
+        model_field = self.get_model_field(self.base_model, embedded_field)  # noqa
 
         if not hasattr(model_field, "document_type") or not issubclass(
             model_field.document_type, EmbeddedDocument
@@ -623,14 +626,14 @@ class Aggify:
 
     @last_out_stage_check
     def replace_root(
-        self, *, embedded_field: str, merge: dict | None = None
+        self, *, embedded_field: str, merge: Union[Dict, None] = None
     ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
 
         Args:
             embedded_field (str): The name of the embedded field to use as the new root.
-            merge (dict | None, optional): A dictionary for merging with the new root. Default is None.
+            merge (Union[Dict, None], optional): A dictionary for merging with the new root. Default is None.
 
         Returns:
             Aggify: The modified Aggify instance.
@@ -651,14 +654,14 @@ class Aggify:
 
     @last_out_stage_check
     def replace_with(
-        self, *, embedded_field: str, merge: dict | None = None
+        self, *, embedded_field: str, merge: Union[Dict, None] = None
     ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
 
         Args:
             embedded_field (str): The name of the embedded field to use as the new root.
-            merge (dict | None, optional): A dictionary for merging with the new root. Default is None.
+            merge (Union[Dict, None], optional): A dictionary for merging with the new root. Default is None.
 
         Returns:
             Aggify: The modified Aggify instance.
