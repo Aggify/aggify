@@ -90,7 +90,7 @@ class Aggify:
                 kwargs[key], str
             ):  # noqa
                 to_keep_values.append(key)
-                self.base_model._fields[key] = fields.IntField  # noqa
+                self.base_model._fields[key] = fields.IntField()  # noqa
 
         # Remove fields from the base model, except the ones in to_keep_values and possibly _id
         keys_for_deletion = set(self.base_model._fields.keys()) - set(  # noqa
@@ -151,7 +151,7 @@ class Aggify:
             else:
                 raise AggifyValueError([str, F], type(expression))
             # TODO: Should be checked if new field is embedded, create embedded field.
-            self.base_model._fields[field.replace("$", "")] = fields.IntField  # noqa
+            self.base_model._fields[field.replace("$", "")] = fields.IntField()  # noqa
 
         self.pipelines.append(add_fields_stage)
         return self
