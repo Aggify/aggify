@@ -4,7 +4,7 @@ from typing import Any, Dict, Type
 from mongoengine import Document, EmbeddedDocument, fields
 from mongoengine.base import TopLevelDocumentMetaclass
 
-from aggify.compiler import F, Match, Q, Operators  # noqa keep
+from aggify.compiler import F, Match, Q, Operators, Cond  # noqa keep
 from aggify.exceptions import (
     AggifyValueError,
     AnnotationError,
@@ -70,10 +70,12 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def order_by(self, field: str) -> "Aggify":
-        self.pipelines.append(
-            {"$sort": {f'{field.replace("-", "")}': -1 if field.startswith("-") else 1}}
-        )
+    def order_by(self, *fields: str | list[str]) -> "Aggify":
+        sort_dict = {
+            field.replace("-", ""): -1 if field.startswith("-") else 1
+            for field in fields
+        }
+        self.pipelines.append({"$sort": sort_dict})
         return self
 
     @last_out_stage_check
@@ -82,7 +84,7 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def add_fields(self, fields: dict) -> "Aggify":  # noqa
+    def add_fields(self, **fields) -> "Aggify":  # noqa
         """
         Generates a MongoDB addFields pipeline stage.
 
@@ -99,6 +101,8 @@ class Aggify:
                 add_fields_stage["$addFields"][field] = {"$literal": expression}
             elif isinstance(expression, F):
                 add_fields_stage["$addFields"][field] = expression.to_dict()
+            elif isinstance(expression, Cond):
+                add_fields_stage["$addFields"][field] = dict(expression)
             else:
                 raise AggifyValueError([str, F], type(expression))
 
