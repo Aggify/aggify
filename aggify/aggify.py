@@ -61,6 +61,10 @@ class Aggify:
         self.stop = None
         self.q = None
 
+    def __iter__(self):
+        # Return a generator or iterator for the data you want to represent as a list
+        return iter(self.pipelines)
+
     @last_out_stage_check
     def project(self, **kwargs: QueryParams) -> "Aggify":
         """
