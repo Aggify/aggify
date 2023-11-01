@@ -10,6 +10,9 @@
     <img src="https://img.shields.io/pypi/v/aggify?color=%2334D058&label=pypi%20package" alt="Package version">
 </a>
 <a href="https://pypi.org/project/aggify" target="_blank">
+    <img src="https://img.shields.io/pypi/dm/aggify" alt="Downloads">
+</a>
+<a href="https://pypi.org/project/aggify" target="_blank">
     <img src="https://img.shields.io/pypi/pyversions/aggify.svg?color=%2334D058" alt="Supported Python versions">
 </a>
 <a href="https://github.com/Aggify/aggify/blob/main/LICENSE" target="_blank">
@@ -18,6 +21,7 @@
 <a href="https://github.com/Aggify/aggify/graphs/contributors" target="_blank">
     <img src="https://img.shields.io/github/contributors/Aggify/aggify.svg" alt="contributors">
 </a>
+
 </p>
 
 # Aggify
