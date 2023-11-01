@@ -1,1 +1,3 @@
-QueryParams = int | None | str | bool | float | dict
+from typing import Union, Dict
+
+QueryParams = Union[int, None, str, bool, float, Dict]

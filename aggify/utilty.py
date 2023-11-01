@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any, Type, Union, List, Dict
 
 from mongoengine import Document
 
@@ -16,7 +16,7 @@ def int_to_slice(final_index: int) -> slice:
     return slice(0, final_index)
 
 
-def to_mongo_positive_index(index: int | slice) -> slice:
+def to_mongo_positive_index(index: Union[int, slice]) -> slice:
     if isinstance(index, int):
         if index < 0:
             raise MongoIndexError
@@ -33,7 +33,7 @@ def to_mongo_positive_index(index: int | slice) -> slice:
     return index
 
 
-def check_fields_exist(model: Document, fields_to_check: list[str]) -> None:
+def check_fields_exist(model: Document, fields_to_check: List[str]) -> None:
     """
     Check if the specified fields exist in a model's fields.
 
@@ -79,8 +79,10 @@ def replace_values_recursive(obj, replacements):
 
 
 def convert_match_query(
-    d: dict,
-) -> dict[Any, list[str | Any] | dict] | list[dict] | dict:
+    d: Dict,
+) -> Union[Dict[Any, Union[List[Union[str, Any]], Dict]], List[Dict], Dict]:
+    pass
+
     """
     Recursively transform a dictionary to modify the structure of '$eq' and '$ne' operators.
 

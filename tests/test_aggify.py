@@ -31,7 +31,7 @@ class TestAggify:
 
     def test__getitem__value_error(self):
         with pytest.raises(AggifyValueError) as err:
-            Aggify(BaseModel)["hello"]  # type: ignore
+            Aggify(BaseModel)["hello"]  # type: ignore # noqa
 
         assert "str" in err.__str__(), "wrong type was not detected"
 

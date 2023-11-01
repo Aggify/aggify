@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, List
 
 
 class AggifyBaseException(Exception):
@@ -33,7 +33,7 @@ class OutStageError(InvalidPipelineStageError):
 
 
 class AggifyValueError(AggifyBaseException):
-    def __init__(self, expected_list: list[Type], result: Type):
+    def __init__(self, expected_list: List[Type], result: Type):
         self.message = (
             f"Input is not correctly passed, expected either of {[expected for expected in expected_list]}"
             f"but got {result}"

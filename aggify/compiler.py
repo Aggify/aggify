@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any, Type, Union, Dict
 
 from mongoengine import Document, EmbeddedDocumentField
 from mongoengine.base import TopLevelDocumentMetaclass
@@ -34,7 +34,7 @@ class Operators:
         **COMPARISON_OPERATORS,
     }
 
-    def __init__(self, match_query: dict[str, Any]):
+    def __init__(self, match_query: Dict[str, Any]):
         self.match_query = match_query
 
     def compile_match(self, operator: str, value, field: str):
@@ -76,7 +76,7 @@ class Operators:
 
 
 class Q:
-    def __init__(self, pipeline: list | None = None, **conditions):
+    def __init__(self, pipeline: Union[list, None] = None, **conditions):
         pipeline = pipeline or []
         self.conditions: dict[str, list] = (
             Match(
@@ -113,7 +113,7 @@ class Q:
 
 
 class F:
-    def __init__(self, field: str | dict[str, list]):
+    def __init__(self, field: Union[str, Dict[str, list]]):
         if isinstance(field, str):
             self.field = f"${field.replace('__', '.')}"
         else:
@@ -224,7 +224,9 @@ class Cond:
 
 
 class Match:
-    def __init__(self, matches: dict[str, Any], base_model: Type[Document] | None):
+    def __init__(
+        self, matches: Dict[str, Any], base_model: Union[Type[Document], None]
+    ):
         self.matches = matches
         self.base_model = base_model
 
@@ -249,12 +251,12 @@ class Match:
         """
         return self.base_model is not None and (
             isinstance(
-                self.base_model._fields.get(field),
+                self.base_model._fields.get(field),  # noqa
                 (EmbeddedDocumentField, TopLevelDocumentMetaclass),
-            )  # noqa
+            )
         )
 
-    def compile(self, pipelines: list) -> dict[str, dict[str, list]]:
+    def compile(self, pipelines: list) -> Dict[str, Dict[str, list]]:
         match_query = {}
         for key, value in self.matches.items():
             if "__" not in key:
