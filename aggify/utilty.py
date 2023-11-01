@@ -130,11 +130,12 @@ def check_field_exists(model: Type[Document], field: str) -> None:
         raise AlreadyExistsField(field=field)
 
 
-def get_db_field(model: Type[Document], field: str) -> str:
+def get_db_field(model: Type[Document], field: str, add_dollar_sign=False) -> str:
     """
     Get the database field name for a given field in the model.
 
     Args:
+        add_dollar_sign: Add a "$" at the start of the field or not
         model (Document): The model containing the field.
         field (str): The name of the field.
 
@@ -143,6 +144,7 @@ def get_db_field(model: Type[Document], field: str) -> str:
     """
     try:
         db_field = model._fields.get(field).db_field  # noqa
-        return field if db_field is None else db_field
+        db_field = field if db_field is None else db_field
+        return f"${db_field}" if add_dollar_sign else db_field
     except AttributeError:
         return field

@@ -247,7 +247,10 @@ class Match:
                   and the base_model is not None, otherwise False.
         """
         return self.base_model is not None and (
-            isinstance(self.base_model._fields.get(field), (EmbeddedDocumentField, TopLevelDocumentMetaclass))  # noqa
+            isinstance(
+                self.base_model._fields.get(field),
+                (EmbeddedDocumentField, TopLevelDocumentMetaclass),
+            )  # noqa
         )
 
     def compile(self, pipelines: list) -> dict[str, dict[str, list]]:
@@ -263,7 +266,10 @@ class Match:
                     raise InvalidOperator(key)
 
             field, operator, *_ = key.split("__")
-            if self.is_base_model_field(field) and operator not in Operators.ALL_OPERATORS:
+            if (
+                self.is_base_model_field(field)
+                and operator not in Operators.ALL_OPERATORS
+            ):
                 pipelines.append(
                     Match({key.replace("__", ".", 1): value}, self.base_model).compile(
                         []
@@ -274,6 +280,8 @@ class Match:
             if operator not in Operators.ALL_OPERATORS:
                 raise InvalidOperator(operator)
             db_field = get_db_field(self.base_model, field)
-            match_query = Operators(match_query).compile_match(operator, value, db_field)
+            match_query = Operators(match_query).compile_match(
+                operator, value, db_field
+            )
 
         return {"$match": match_query}
