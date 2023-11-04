@@ -2,14 +2,13 @@ from typing import Type, List
 
 
 class AggifyBaseException(Exception):
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
+    message: str
 
 
 class MongoIndexError(AggifyBaseException):
     def __init__(self):
-        super().__init__("Index error is invalid, please use int or slice without step!")
+        self.message = "Index error is invalid, please use int or slice without step!"
+        super().__init__(self.message)
 
 
 class InvalidPipelineStageError(AggifyBaseException):
@@ -18,6 +17,10 @@ class InvalidPipelineStageError(AggifyBaseException):
     Subclass and customise for the raised exception in the methods
     """
 
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
 
 class AnnotationError(InvalidPipelineStageError):
     pass
@@ -25,41 +28,47 @@ class AnnotationError(InvalidPipelineStageError):
 
 class OutStageError(InvalidPipelineStageError):
     def __init__(self, stage):
-        super().__init__(f"You cannot add a {stage!r} pipeline after $out stage!")
+        self.message = f"You cannot add a {self!r} pipeline after $out stage!"
+        super().__init__(self.message)
 
 
 class AggifyValueError(AggifyBaseException):
     def __init__(self, expected_list: List[Type], result: Type):
-        super().__init__(
-            f"Input is not correctly passed, expected either of {expected_list}, but got {result}"
+        self.message = (
+            f"Input is not correctly passed, expected either of {[expected for expected in expected_list]}"
+            f"but got {result}"
         )
         self.expecteds = expected_list
         self.result = result
+        super().__init__(self.message)
 
 
 class InvalidOperator(AggifyBaseException):
     def __init__(self, operator: str):
-        super().__init__(
-            f"Operator {operator} does not exist, please refer to documentation to see all supported operators."
-        )
+        self.message = f"Operator {operator} does not exists, please refer to documentation to see all supported operators."
+        super().__init__(self.message)
 
 
 class InvalidField(AggifyBaseException):
     def __init__(self, field: str):
-        super().__init__(f"Field {field} does not exist.")
+        self.message = f"Field {field} does not exists."
+        super().__init__(self.message)
 
 
 class InvalidEmbeddedField(AggifyBaseException):
     def __init__(self, field: str):
-        super().__init__(f"Field {field} is not embedded.")
+        self.message = f"Field {field} is not embedded."
+        super().__init__(self.message)
 
 
 class AlreadyExistsField(AggifyBaseException):
     def __init__(self, field: str):
-        super().__init__(f"Field {field} already exists.")
+        self.message = f"Field {field} already exists."
+        super().__init__(self.message)
 
 
 class InvalidArgument(AggifyBaseException):
     def __init__(self, expected_list: list):
-        super().__init__(f"Input is not correctly passed, expected {expected_list}")
+        self.message = f"Input is not correctly passed, expected {[expected for expected in expected_list]}"
         self.expecteds = expected_list
+        super().__init__(self.message)
