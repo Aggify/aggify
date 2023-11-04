@@ -680,3 +680,61 @@ class Aggify:
         self.pipelines.append(new_root)
 
         return self
+
+    @last_out_stage_check
+    def redact(self, value1, condition, value2, then_value, else_value):
+        """
+        Add a $redact stage to the pipeline based on the provided conditions.
+
+        The $redact stage restricts the contents of the returned documents
+        based on the condition specified. This method assists in building
+        the $redact stage for a MongoDB aggregation pipeline.
+
+        Parameters:
+        - value1 (str): The first value to compare in the condition.
+        - condition (str): The MongoDB comparison operator (e.g., "$eq", "$lt").
+        - value2 (str): The second value to compare in the condition.
+        - then_value (str): The action to take if the condition is True.
+                            Expected values: "$DESCEND", "$PRUNE", "$KEEP".
+        - else_value (str): The action to take if the condition is False.
+                            Expected values: "$DESCEND", "$PRUNE", "$KEEP".
+
+        Returns:
+        - self: Returns the instance of the class to allow chaining.
+
+        Raises:
+        - InvalidArgument: If then_value or else_value are not in the expected list.
+        """
+
+        # List of valid redaction values
+        redact_values = ["DESCEND", "PRUNE", "KEEP"]
+
+        def clean_then_else(then_value, else_value):
+            """
+            Helper function to sanitize then_value and else_value.
+
+            Strips the dollar sign and converts values to uppercase.
+            """
+            return (
+                then_value.replace("$", "").upper(),
+                else_value.replace("$", "").upper(),
+            )
+
+        # Clean the provided then_value and else_value
+        then_value, else_value = clean_then_else(then_value, else_value)
+
+        # Check if the cleaned values are in the valid list
+        if then_value not in redact_values or else_value not in redact_values:
+            raise InvalidArgument(expected_list=redact_values)
+
+        # Construct the $redact stage with the provided condition
+        stage = {
+            "$redact": dict(
+                Cond(value1, condition, value2, f"$${then_value}", f"$${else_value}")
+            )
+        }
+
+        # Append the constructed stage to the pipelines list
+        self.pipelines.append(stage)
+
+        return self

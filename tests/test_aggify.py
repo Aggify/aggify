@@ -412,3 +412,53 @@ class TestAggify:
             assert thing.pipelines[-1]["$unwind"]["includeArrayIndex"] == "Mahdi"
         if preserve is not None:
             assert thing.pipelines[-1]["$unwind"]["preserveNullAndEmptyArrays"] is True
+
+    def test_regex_exact(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__exact="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$eq": "Aggify"}
+
+    def test_regex_iexact(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__iexact="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "^Aggify$", "$options": "i"}
+
+    def test_regex_contains(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__contains="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "Aggify"}
+
+    def test_regex_icontains(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__icontains="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "Aggify", "$options": "i"}
+
+    def test_regex_startwith(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__startswith="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "^Aggify"}
+
+    def test_regex_istarstwith(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__istartswith="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "^Aggify", "$options": "i"}
+
+    def test_regex_endswith(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__endswith="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "Aggify$"}
+
+    def test_regex_iendswith(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__iendswith="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "Aggify$", "$options": "i"}
+
+    def test_regex_f_with_exact(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__exact=F("age")))
+        assert thing[-1]["$match"] == {"$expr": {"$eq": ["$name", "$age"]}}
+
+    def test_regex_f_with_others(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(ValueError):
+            aggify.filter(name__contains=F("age"))
