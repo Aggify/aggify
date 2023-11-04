@@ -495,6 +495,16 @@ class Aggify:
 
         return merged_pipeline
 
+    # check_fields_exist(self.base_model, let)  # noqa
+    def get_field_name_recursively(self, field):
+        field_name = []
+        prev_base = self.base_model
+        for index, item in enumerate(field.split("__")):
+            check_fields_exist(prev_base, [item])  # noqa
+            field_name.append(get_db_field(prev_base, item))
+            prev_base = self.get_model_field(prev_base, item)
+        return ".".join(field_name)
+
     @last_out_stage_check
     def lookup(
         self,
@@ -544,11 +554,12 @@ class Aggify:
         else:
             if not query:
                 raise InvalidArgument(expected_list=["query"])
-            check_fields_exist(self.base_model, let)  # noqa
+
             let_dict = {
-                field: f"${get_db_field(self.base_model, field)}"  # noqa
-                for field in let  # noqa
+                field: f"${get_db_field(self.base_model, self.get_field_name_recursively(field))}"  # noqa
+                for field in let
             }
+
             for q in query:
                 # Construct the match stage for each query
                 if isinstance(q, Q):
