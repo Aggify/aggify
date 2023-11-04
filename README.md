@@ -28,8 +28,6 @@ organized interface.
 
 ## TODO
 
-- [ ] `$replaceRoot`: Replaces the document structure with a new one.
-- [ ] `$project` (with expressions): Allows you to use expressions to reshape and calculate values.
 - [ ] `$redact`: Controls document inclusion during the aggregation pipeline.
 
 ## Installation
