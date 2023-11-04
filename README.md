@@ -11,6 +11,7 @@
 [![Coverage](https://img.shields.io/codecov/c/github/Aggify/aggify)](https://coverage-badge.samuelcolvin.workers.dev/redirect/Aggify/aggify)
 [![License](https://img.shields.io/github/license/Aggify/aggify.svg)](https://github.com/Aggify/aggify/blob/main/LICENSE)
 [![Contributors](https://img.shields.io/github/contributors/Aggify/aggify.svg)](https://github.com/Aggify/aggify/graphs/contributors)
+[![Telegram](https://img.shields.io/badge/-telegram-red?color=white&logo=telegram&logoColor=blue)](https://t.me/Aggify)
 
 # Aggify
 
