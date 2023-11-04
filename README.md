@@ -28,7 +28,7 @@ organized interface.
 
 ## TODO
 
-- [ ] `$redact`: Controls document inclusion during the aggregation pipeline.
+
 
 ## Installation
 
