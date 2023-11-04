@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aggify"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["SeYeD.Dev <me@seyed.dev>"]
 repository = "https://github.com/Aggify/aggify"
 documentation = "https://github.com/Aggify/aggify/docs"
