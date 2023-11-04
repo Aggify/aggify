@@ -496,13 +496,36 @@ class Aggify:
         return merged_pipeline
 
     # check_fields_exist(self.base_model, let)  # noqa
-    def get_field_name_recursively(self, field):
+    def get_field_name_recursively(self, field: str) -> str:
+        """
+        Recursively fetch the field name by following the hierarchy indicated by the field parameter.
+
+        The function traverses the field hierarchy indicated by double underscores in the field parameter.
+        At each level, it checks if the field exists and then fetches the database field name for it.
+        The entire hierarchy is then joined using a dot (.) separator.
+
+        Parameters:
+        - field (str): A string indicating the hierarchy of fields, separated by double underscores.
+
+        Returns:
+        - str: A dot-separated string representing the full path to the field in the database.
+        """
+
         field_name = []
         prev_base = self.base_model
+
+        # Split the field based on double underscores and process each item
         for index, item in enumerate(field.split("__")):
+            # Ensure the field exists at the current level of hierarchy
             check_fields_exist(prev_base, [item])  # noqa
+
+            # Append the database field name to the field_name list
             field_name.append(get_db_field(prev_base, item))
+
+            # Move to the next level in the model hierarchy
             prev_base = self.get_model_field(prev_base, item)
+
+        # Join the entire hierarchy using dots and return
         return ".".join(field_name)
 
     @last_out_stage_check
