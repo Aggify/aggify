@@ -105,10 +105,10 @@ class TestAggify:
             "$gt": ["$age", 30]
         }
         assert (
-            aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["then"] == "Adult"
+                aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["then"] == "Adult"
         )
         assert (
-            aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["else"] == "Child"
+                aggify.pipelines[0]["$project"]["custom_field"]["$cond"]["else"] == "Child"
         )
 
     # Test filtering using not operator
@@ -185,27 +185,27 @@ class TestAggify:
     @pytest.mark.parametrize(
         "accumulator",
         (
-            "sum",
-            "avg",
-            "stdDevPop",
-            "stdDevSamp",
-            "push",
-            "addToSet",
-            "count",
-            "first",
-            "last",
-            "max",
-            "accumulator",
-            "min",
-            "median",
-            "mergeObjects",
-            "top",
-            "bottom",
-            "topN",
-            "bottomN",
-            "firstN",
-            "lastN",
-            "maxN",
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
         ),
     )
     def test_annotate_with_raw_f(self, accumulator):
@@ -217,27 +217,27 @@ class TestAggify:
     @pytest.mark.parametrize(
         "accumulator",
         (
-            "sum",
-            "avg",
-            "stdDevPop",
-            "stdDevSamp",
-            "push",
-            "addToSet",
-            "count",
-            "first",
-            "last",
-            "max",
-            "accumulator",
-            "min",
-            "median",
-            "mergeObjects",
-            "top",
-            "bottom",
-            "topN",
-            "bottomN",
-            "firstN",
-            "lastN",
-            "maxN",
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
         ),
     )
     def test_annotate_with_f(self, accumulator):
@@ -251,27 +251,27 @@ class TestAggify:
     @pytest.mark.parametrize(
         "accumulator",
         (
-            "sum",
-            "avg",
-            "stdDevPop",
-            "stdDevSamp",
-            "push",
-            "addToSet",
-            "count",
-            "first",
-            "last",
-            "max",
-            "accumulator",
-            "min",
-            "median",
-            "mergeObjects",
-            "top",
-            "bottom",
-            "topN",
-            "bottomN",
-            "firstN",
-            "lastN",
-            "maxN",
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
         ),
     )
     def test_annotate_raw_value(self, accumulator):
@@ -285,27 +285,27 @@ class TestAggify:
     @pytest.mark.parametrize(
         "accumulator",
         (
-            "sum",
-            "avg",
-            "stdDevPop",
-            "stdDevSamp",
-            "push",
-            "addToSet",
-            "count",
-            "first",
-            "last",
-            "max",
-            "accumulator",
-            "min",
-            "median",
-            "mergeObjects",
-            "top",
-            "bottom",
-            "topN",
-            "bottomN",
-            "firstN",
-            "lastN",
-            "maxN",
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
         ),
     )
     def test_annotate_raw_value_not_model_field(self, accumulator):
@@ -319,27 +319,27 @@ class TestAggify:
     @pytest.mark.parametrize(
         "accumulator",
         (
-            "sum",
-            "avg",
-            "stdDevPop",
-            "stdDevSamp",
-            "push",
-            "addToSet",
-            "count",
-            "first",
-            "last",
-            "max",
-            "accumulator",
-            "min",
-            "median",
-            "mergeObjects",
-            "top",
-            "bottom",
-            "topN",
-            "bottomN",
-            "firstN",
-            "lastN",
-            "maxN",
+                "sum",
+                "avg",
+                "stdDevPop",
+                "stdDevSamp",
+                "push",
+                "addToSet",
+                "count",
+                "first",
+                "last",
+                "max",
+                "accumulator",
+                "min",
+                "median",
+                "mergeObjects",
+                "top",
+                "bottom",
+                "topN",
+                "bottomN",
+                "firstN",
+                "lastN",
+                "maxN",
         ),
     )
     def test_annotate_add_annotated_field_to_base_model(self, accumulator):
@@ -360,13 +360,13 @@ class TestAggify:
     @pytest.mark.parametrize(
         ("method", "args"),
         (
-            ("group", ("_id",)),
-            ("order_by", ("field",)),
-            ("raw", ({"$query": "query"},)),
-            ("add_fields", ({"$field": "value"},)),
-            ("filter", (Q(age=20),)),
-            ("__getitem__", (slice(2, 10),)),
-            ("unwind", ("path",)),
+                ("group", ("_id",)),
+                ("order_by", ("field",)),
+                ("raw", ({"$query": "query"},)),
+                ("add_fields", ({"$field": "value"},)),
+                ("filter", (Q(age=20),)),
+                ("__getitem__", (slice(2, 10),)),
+                ("unwind", ("path",)),
         ),
     )
     def test_out_stage_error(self, method, args):
@@ -397,9 +397,9 @@ class TestAggify:
     @pytest.mark.parametrize(
         "params",
         (
-            {"include_index_array": "Mahdi"},
-            {"preserve": True},
-            {"include_index_array": "Mahdi", "preserve": True},
+                {"include_index_array": "Mahdi"},
+                {"preserve": True},
+                {"include_index_array": "Mahdi", "preserve": True},
         ),
     )
     def test_unwind_with_parameters(self, params):
@@ -412,3 +412,53 @@ class TestAggify:
             assert thing.pipelines[-1]["$unwind"]["includeArrayIndex"] == "Mahdi"
         if preserve is not None:
             assert thing.pipelines[-1]["$unwind"]["preserveNullAndEmptyArrays"] is True
+
+    def test_regex_exact(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__exact="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$eq": "Aggify"}
+
+    def test_regex_iexact(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__iexact="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "^Aggify$", "$options": "i"}
+
+    def test_regex_contains(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__contains="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "Aggify"}
+
+    def test_regex_icontains(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__icontains="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "Aggify", "$options": "i"}
+
+    def test_regex_startwith(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__startswith="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "^Aggify"}
+
+    def test_regex_istarstwith(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__istartswith="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "^Aggify", "$options": "i"}
+
+    def test_regex_endswith(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__endswith="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "Aggify$"}
+
+    def test_regex_iendswith(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__iendswith="Aggify"))
+        assert thing[-1]["$match"]["name"] == {"$regex": "Aggify$", "$options": "i"}
+
+    def test_regex_f_with_exact(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.filter(name__exact=F("age")))
+        assert thing[-1]["$match"] == {"$expr": {"$eq": ["$name", "$age"]}}
+
+    def test_regex_f_with_others(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(ValueError):
+            aggify.filter(name__contains=F("age"))
