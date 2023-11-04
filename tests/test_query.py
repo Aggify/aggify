@@ -360,6 +360,51 @@ cases = [
             }
         ],
     ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(PostDocument)
+            .lookup(
+                AccountDocument,
+                as_name="post_owner",
+                query=[Q(owner__exact="owner")],
+                let=["owner"],
+            )
+            .lookup(
+                AccountDocument,
+                query=[Q(username__exact="post_owner__username")],
+                let=["post_owner__username"],
+                as_name="test",
+            )
+        ),
+        expected_query=[
+            {
+                "$lookup": {
+                    "from": "account",
+                    "let": {"owner": "$owner_id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$$owner", "$$owner"]}}}
+                    ],
+                    "as": "post_owner",
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "account",
+                    "let": {"post_owner__username": "$post_owner.username"},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$eq": ["$username", "$$post_owner__username"]
+                                }
+                            }
+                        }
+                    ],
+                    "as": "test",
+                }
+            },
+        ],
+    ),
 ]
 
 
