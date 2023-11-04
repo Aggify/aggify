@@ -326,6 +326,40 @@ cases = [
             {"$match": {"_owner.username": "Aggify"}},
         ],
     ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(AccountDocument).redact("$username", ">=", "$age", "prune", "keep")
+        ),
+        expected_query=[
+            {
+                "$redact": {
+                    "$cond": {
+                        "if": {"$gte": ["$username", "$age"]},
+                        "then": "$$PRUNE",
+                        "else": "$$KEEP",
+                    }
+                }
+            }
+        ],
+    ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(AccountDocument).redact(
+                "$username", ">=", "$age", "PRUne", "$$$keep"
+            )
+        ),
+        expected_query=[
+            {
+                "$redact": {
+                    "$cond": {
+                        "if": {"$gte": ["$username", "$age"]},
+                        "then": "$$PRUNE",
+                        "else": "$$KEEP",
+                    }
+                }
+            }
+        ],
+    ),
 ]
 
 
