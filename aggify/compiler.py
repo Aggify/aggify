@@ -10,7 +10,7 @@ from aggify.utilty import get_db_field
 class Operators:
     QUERY_OPERATORS = {
         "exact": "$eq",
-        "iexact": "$eq",
+        "iexact": "$regex",
         "contains": "$regex",
         "icontains": "$regex",  # noqa
         "startswith": "$regex",
@@ -34,6 +34,23 @@ class Operators:
         **COMPARISON_OPERATORS,
     }
 
+    REGEX_PATTERNS = {
+        "iexact": "^{value}$",
+        "contains": "{value}",
+        "icontains": "{value}",
+        "startswith": "^{value}",
+        "istartswith": "^{value}",
+        "endswith": "{value}$",
+        "iendswith": "{value}$",
+    }
+
+    REGEX_OPTIONS = {
+        "iexact": "i",
+        "icontains": "i",
+        "istartswith": "i",
+        "iendswith": "i",
+    }
+
     def __init__(self, match_query: Dict[str, Any]):
         self.match_query = match_query
 
@@ -42,35 +59,30 @@ class Operators:
         # I think there should be easier way to inject comparison operators to be defined per each
         # like map an existing template to each operator
 
-        if operator in ["exact", "iexact"]:
-            self.match_query[field] = {Operators.ALL_OPERATORS[operator]: value}
+        if operator in Operators.REGEX_PATTERNS:
+            if isinstance(value, F):
+                raise ValueError("Not implemented yet")
+            pattern = Operators.REGEX_PATTERNS[operator].format(value=value)
+            # Create the base query with the pattern
+            query = {Operators.ALL_OPERATORS[operator]: pattern}
 
-        elif operator in [
-            "contains",
-            "startswith",
-            "endswith",
-            "icontains",
-            "istartswith",
-            "iendswith",
-        ]:  # noqa
-            self.match_query[field] = {
-                Operators.ALL_OPERATORS[operator]: f".*{value}.*",
-                "$options": "i",
-            }
+            # If there's an option for the operator, add it to the query
+            if operator in Operators.REGEX_OPTIONS:
+                query["$options"] = Operators.REGEX_OPTIONS[operator]
 
-        elif operator in Operators.ALL_OPERATORS[operator]:
+            self.match_query[field] = query
+        elif operator in Operators.ALL_OPERATORS:
             if isinstance(value, F):
                 self.match_query["$expr"] = {
-                    Operators.ALL_OPERATORS[operator]: [
-                        f"${field}",
-                        value.to_dict(),
-                    ]
+                    Operators.ALL_OPERATORS[operator]: [f"${field}", value.to_dict()]
                 }
-
             else:
                 self.match_query[field] = {Operators.ALL_OPERATORS[operator]: value}
         else:
-            self.match_query[field] = {Operators.ALL_OPERATORS[operator]: value}
+            # Default behavior
+            self.match_query[field] = {
+                Operators.ALL_OPERATORS.get(operator, operator): value
+            }
 
         return self.match_query
 
