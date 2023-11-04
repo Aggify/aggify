@@ -61,7 +61,7 @@ cases = [
             caption__contains="hello", owner__deleted_at=None
         ),
         expected_query=[
-            {"$match": {"caption": {"$options": "i", "$regex": ".*hello.*"}}},
+            {"$match": {"caption": {"$regex": "hello"}}},
             {
                 "$lookup": {
                     "as": "owner",
@@ -85,7 +85,7 @@ cases = [
         .filter(caption__contains="hello")
         .project(caption=1, deleted_at=0),
         expected_query=[
-            {"$match": {"caption": {"$options": "i", "$regex": ".*hello.*"}}},
+            {"$match": {"caption": {"$regex": "hello"}}},
             {"$project": {"caption": 1, "deleted_at": 0}},
         ],
     ),
@@ -102,11 +102,10 @@ cases = [
                             "$or": [
                                 {
                                     "caption": {
-                                        "$options": "i",
-                                        "$regex": ".*['hello'].*",
+                                        "$regex": "['hello']",
                                     }
                                 },
-                                {"location": {"$options": "i", "$regex": ".*test.*"}},
+                                {"location": {"$regex": "test"}},
                             ]
                         },
                         {"deleted_at": None},
