@@ -32,7 +32,7 @@ def last_out_stage_check(method):
     """
 
     @functools.wraps(method)
-    def decorator(*args, **kwargs):
+    def decorator(*args, **kwargs) -> "Aggify":
         try:
             if bool(args[0].pipelines[-1].get("$out")):
                 raise OutStageError(method.__name__)
