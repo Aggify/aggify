@@ -1,3 +1,5 @@
 from typing import Union, Dict
 
-QueryParams = Union[int, None, str, bool, float, Dict]
+from bson import ObjectId
+
+QueryParams = Union[int, None, str, bool, float, Dict, ObjectId]
