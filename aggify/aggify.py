@@ -83,25 +83,23 @@ class Aggify:
         """
 
         # Extract fields to keep and check if _id should be deleted
-        to_keep_values = ["id"]
-        delete_id = kwargs.get("id") == 0
+        to_keep_values = {"id"}
+        delete_id = kwargs.get("id") is not None
         projection = {}
 
         # Add missing fields to the base model
         for key, value in kwargs.items():
             if value == 1:
-                to_keep_values.append(key)
+                to_keep_values.add(key)
             elif key not in self.base_model._fields and isinstance(  # noqa
                 kwargs[key], (str, dict)
-            ):  # noqa
-                to_keep_values.append(key)
+            ):
+                to_keep_values.add(key)
                 self.base_model._fields[key] = fields.IntField()  # noqa
             projection[get_db_field(self.base_model, key)] = value  # noqa
 
         # Remove fields from the base model, except the ones in to_keep_values and possibly _id
-        keys_for_deletion = set(self.base_model._fields.keys()) - set(  # noqa
-            to_keep_values
-        )  # noqa
+        keys_for_deletion = self.base_model._fields.keys() - to_keep_values  # noqa
         if delete_id:
             keys_for_deletion.add("id")
         for key in keys_for_deletion:

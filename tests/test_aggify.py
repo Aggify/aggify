@@ -1,5 +1,5 @@
 import pytest
-from mongoengine import Document, IntField, StringField
+from mongoengine import Document, IntField, StringField, UUIDField
 
 from aggify import Aggify, Cond, F, Q
 from aggify.exceptions import (
@@ -45,6 +45,12 @@ class TestAggify:
         aggify.filter(age__gte=30).project(name=1, age=1)
         assert len(aggify.pipelines) == 2
         assert aggify.pipelines[1]["$project"] == {"name": 1, "age": 1}
+
+    def test_filtering_and_projection_with_deleting_id(self):
+        aggify = Aggify(BaseModel)
+        aggify.filter(age__gte=30).project(name=1, age=1, id=0)
+        assert len(aggify.pipelines) == 2
+        assert aggify.pipelines[1]["$project"] == {"_id": 0, "name": 1, "age": 1}
 
     def test_filtering_and_ordering(self):
         aggify = Aggify(BaseModel)
