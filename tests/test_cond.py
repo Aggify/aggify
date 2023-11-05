@@ -80,6 +80,8 @@ class TestCond:
 
     # Test invalid operator
     def test_invalid_operator(self):
-        with pytest.raises(InvalidOperator):
+        with pytest.raises(InvalidOperator) as err:
             cond = Cond(25, "invalid_operator", 20, "High", "Low")
-            assert dict(cond)
+            dict(cond)
+
+        assert "Operator invalid_operator does not exists" in err.__str__()
