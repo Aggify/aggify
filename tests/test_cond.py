@@ -80,6 +80,5 @@ class TestCond:
 
     # Test invalid operator
     def test_invalid_operator(self):
-        with pytest.raises(InvalidOperator):
-            cond = Cond(25, "invalid_operator", 20, "High", "Low")
-            assert dict(cond)
+        with pytest.raises(InvalidOperator) as err:
+            Cond(25, "invalid_operator", 20, "High", "Low")
