@@ -13,7 +13,7 @@ from aggify.exceptions import (
     OutStageError,
     InvalidArgument,
 )
-from aggify.types import QueryParams
+from aggify.types import QueryParams, CollectionType
 from aggify.utilty import (
     to_mongo_positive_index,
     check_fields_exist,
@@ -24,7 +24,6 @@ from aggify.utilty import (
 )
 
 AggifyType = TypeVar("AggifyType", bound=Callable[..., "Aggify"])
-CollectionType = TypeVar("CollectionType", bound=Callable[..., "Document"])
 
 
 def last_out_stage_check(method: AggifyType) -> AggifyType:
@@ -179,7 +178,9 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def filter(self, arg: Union[Q, None] = None, **kwargs: QueryParams) -> "Aggify":
+    def filter(
+        self, arg: Union[Q, None] = None, **kwargs: Union[QueryParams, F, list]
+    ) -> "Aggify":
         """
         # TODO: missing docs
         """
@@ -549,7 +550,7 @@ class Aggify:
         self,
         from_collection: CollectionType,
         as_name: str,
-        query: Union[List[Q], Union[Q, None]] = None,
+        query: Union[List[Q], Union[Q, None], List["Aggify"]] = None,
         let: Union[List[str], None] = None,
         local_field: Union[str, None] = None,
         foreign_field: Union[str, None] = None,
