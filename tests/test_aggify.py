@@ -7,6 +7,7 @@ from aggify.exceptions import (
     AnnotationError,
     OutStageError,
     InvalidArgument,
+    InvalidField,
 )
 
 
@@ -395,9 +396,9 @@ class TestAggify:
 
     def test_unwind_just_path(self):
         aggify = Aggify(BaseModel)
-        thing = aggify.unwind(path="Hello")
+        thing = aggify.unwind(path="name")
         assert len(thing.pipelines) == 1
-        assert thing.pipelines[-1]["$unwind"] == "$Hello"
+        assert thing.pipelines[-1]["$unwind"] == "$name"
 
     @pytest.mark.parametrize(
         "params",
@@ -409,7 +410,7 @@ class TestAggify:
     )
     def test_unwind_with_parameters(self, params):
         aggify = Aggify(BaseModel)
-        thing = aggify.unwind("Hi", **params)
+        thing = aggify.unwind("name", **params)
         assert len(thing.pipelines) == 1
         include = params.get("include_index_array")
         preserve = params.get("preserve")
@@ -519,3 +520,8 @@ class TestAggify:
             "pipeline": [{"$match": {"name": 123}}],
             "as": "__",
         }
+
+    def test_unwind_invalid_field(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidField):
+            aggify.unwind("invalid")
