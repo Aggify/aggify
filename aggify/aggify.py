@@ -357,15 +357,6 @@ class Aggify:
         self.pipelines.append(unwind_stage)
         return self
 
-    def aggregate(self):
-        """
-        Returns the aggregated results.
-
-        Returns:
-            The aggregated results.
-        """
-        return self.base_model.objects.aggregate(*self.pipelines)  # type: ignore
-
     def annotate(
         self, annotate_name: str, accumulator: str, f: Union[Union[str, Dict], F, int]
     ) -> "Aggify":
