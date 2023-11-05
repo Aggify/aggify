@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, Type, Union, List
+from typing import Any, Dict, Type, Union, List, Callable, TypeVar
 
 from mongoengine import Document, EmbeddedDocument, fields
 from mongoengine.base import TopLevelDocumentMetaclass
@@ -23,8 +23,10 @@ from aggify.utilty import (
     get_db_field,
 )
 
+T = TypeVar('T', bound=Callable[..., "Aggify"])
 
-def last_out_stage_check(method):
+
+def last_out_stage_check(method: T) -> T:
     """Check if the last stage is $out or not
 
     This decorator check if the last stage is $out or not
@@ -60,6 +62,9 @@ class Aggify:
         self.start = None
         self.stop = None
         self.q = None
+
+    def __getattr__(self, attr):
+        return getattr(self.base_model, attr)
 
     def __iter__(self):
         # Return a generator or iterator for the data you want to represent as a list
