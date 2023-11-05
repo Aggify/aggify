@@ -8,7 +8,7 @@
 [![Package version](https://img.shields.io/pypi/v/aggify?color=%2334D058&label=pypi%20package)](https://pypi.org/project/aggify)
 [![Downloads](https://img.shields.io/pypi/dm/aggify)](https://pypi.org/project/aggify)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/aggify.svg?color=%2334D058)](https://pypi.org/project/aggify)
-[![Coverage](https://img.shields.io/codecov/c/github/Aggify/aggify)](https://coverage-badge.samuelcolvin.workers.dev/redirect/Aggify/aggify)
+[![Coverage](https://img.shields.io/codecov/c/github/Aggify/aggify)](https://app.codecov.io/gh/Aggify/aggify)
 [![License](https://img.shields.io/github/license/Aggify/aggify.svg)](https://github.com/Aggify/aggify/blob/main/LICENSE)
 [![Contributors](https://img.shields.io/github/contributors/Aggify/aggify.svg)](https://github.com/Aggify/aggify/graphs/contributors)
 [![Telegram](https://img.shields.io/badge/-telegram-red?color=white&logo=telegram&logoColor=blue)](https://t.me/Aggify)

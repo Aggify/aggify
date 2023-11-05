@@ -7,6 +7,11 @@ from aggify.exceptions import (
     AnnotationError,
     OutStageError,
     InvalidArgument,
+    InvalidField,
+    InvalidOperator,
+    AlreadyExistsField,
+    InvalidEmbeddedField,
+    MongoIndexError,
 )
 
 
@@ -25,7 +30,7 @@ class BaseModel(Document):
 class TestAggify:
     def test__getitem__zero(self):
         aggify = Aggify(BaseModel)
-        aggify[0]
+        assert aggify[0]
 
     def test__getitem__slice(self):
         aggify = Aggify(BaseModel)
@@ -165,6 +170,7 @@ class TestAggify:
 
     def test_filter_value_error(self):
         with pytest.raises(AggifyValueError):
+            # noinspection PyTypeChecker
             Aggify(BaseModel).filter(arg="Hi")
 
     def test_group(self):
@@ -175,20 +181,24 @@ class TestAggify:
 
     def test_annotate_empty_pipeline_value_error(self):
         with pytest.raises(AnnotationError) as err:
+            # noinspection PyTypeChecker
             Aggify(BaseModel).annotate("size", "sum", None)
 
         assert "your pipeline is empty" in err.__str__().lower()
 
     def test_annotate_not_group_value_error(self):
         with pytest.raises(AnnotationError) as err:
+            # noinspection PyTypeChecker
             Aggify(BaseModel)[1].annotate("size", "sum", None)
 
         assert "not to $limit" in err.__str__().lower()
 
     def test_annotate_invalid_accumulator(self):
         with pytest.raises(AnnotationError):
+            # noinspection PyTypeChecker
             Aggify(BaseModel).group("name").annotate("size", "mahdi", None)
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -221,6 +231,7 @@ class TestAggify:
         assert len(thing.pipelines) == 1
         assert thing.pipelines[-1]["$group"]["price"] == {f"${accumulator}": "$price"}
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -255,6 +266,7 @@ class TestAggify:
             f"${accumulator}": {"$multiply": ["$price", 10]}
         }
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -289,6 +301,7 @@ class TestAggify:
             f"${accumulator}": "$name"
         }
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -323,6 +336,7 @@ class TestAggify:
             f"${accumulator}": "some_value"
         }
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -397,23 +411,23 @@ class TestAggify:
 
     def test_unwind_just_path(self):
         aggify = Aggify(BaseModel)
-        thing = aggify.unwind(path="Hello")
+        thing = aggify.unwind(path="name")
         assert len(thing.pipelines) == 1
-        assert thing.pipelines[-1]["$unwind"] == "$Hello"
+        assert thing.pipelines[-1]["$unwind"] == "$name"
 
     @pytest.mark.parametrize(
         "params",
         (
-            {"include_index_array": "Mahdi"},
+            {"include_array_index": "Mahdi"},
             {"preserve": True},
-            {"include_index_array": "Mahdi", "preserve": True},
+            {"include_array_index": "Mahdi", "preserve": True},
         ),
     )
     def test_unwind_with_parameters(self, params):
         aggify = Aggify(BaseModel)
-        thing = aggify.unwind("Hi", **params)
+        thing = aggify.unwind("name", **params)
         assert len(thing.pipelines) == 1
-        include = params.get("include_index_array")
+        include = params.get("include_array_index")
         preserve = params.get("preserve")
         if include is not None:
             assert thing.pipelines[-1]["$unwind"]["includeArrayIndex"] == "Mahdi"
@@ -435,16 +449,19 @@ class TestAggify:
         thing = list(aggify.filter(name__contains="Aggify"))
         assert thing[-1]["$match"]["name"] == {"$regex": "Aggify"}
 
+    # noinspection SpellCheckingInspection
     def test_regex_icontains(self):
         aggify = Aggify(BaseModel)
         thing = list(aggify.filter(name__icontains="Aggify"))
         assert thing[-1]["$match"]["name"] == {"$regex": "Aggify", "$options": "i"}
 
+    # noinspection SpellCheckingInspection
     def test_regex_startwith(self):
         aggify = Aggify(BaseModel)
         thing = list(aggify.filter(name__startswith="Aggify"))
         assert thing[-1]["$match"]["name"] == {"$regex": "^Aggify"}
 
+    # noinspection SpellCheckingInspection
     def test_regex_istarstwith(self):
         aggify = Aggify(BaseModel)
         thing = list(aggify.filter(name__istartswith="Aggify"))
@@ -455,6 +472,7 @@ class TestAggify:
         thing = list(aggify.filter(name__endswith="Aggify"))
         assert thing[-1]["$match"]["name"] == {"$regex": "Aggify$"}
 
+    # noinspection SpellCheckingInspection
     def test_regex_iendswith(self):
         aggify = Aggify(BaseModel)
         thing = list(aggify.filter(name__iendswith="Aggify"))
@@ -469,11 +487,6 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         with pytest.raises(ValueError):
             aggify.filter(name__contains=F("age"))
-
-    def test_aggregate_failed_connection(self):
-        aggify = Aggify(BaseModel)
-        with pytest.raises(ValueError):
-            aggify.filter(name__contains=F("age")).aggregate()
 
     def test_annotate_str_field_as_value_but_not_base_model_field(self):
         thing = list(Aggify(BaseModel).group("name").annotate("age", "sum", "test"))
@@ -521,3 +534,84 @@ class TestAggify:
             "pipeline": [{"$match": {"name": 123}}],
             "as": "__",
         }
+
+    def test_unwind_invalid_field(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidField):
+            aggify.unwind("invalid")
+
+    def test_in_operator(self):
+        thing = list(Aggify(BaseModel).filter(name__in=[]))
+        assert thing[0]["$match"] == {"name": {"$in": []}}
+
+    def test_nin_operator(self):
+        thing = list(Aggify(BaseModel).filter(name__nin=[]))
+        assert thing[0]["$match"] == {"name": {"$nin": []}}
+
+    def test_eq_operator(self):
+        thing = list(Aggify(BaseModel).filter(name__exact=[]))
+        assert thing[0]["$match"] == {"name": {"$eq": []}}
+
+    def test_invalid_operator(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidOperator):
+            aggify.filter(name__aggify="test")
+
+    def test_lookup_with_duplicate_as_name(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(AlreadyExistsField):
+            aggify.lookup(
+                BaseModel, local_field="name", foreign_field="name", as_name="name"
+            )
+
+    def test_project_delete_id(self):
+        thing = list(Aggify(BaseModel).project(id=0))
+        assert thing[0]["$project"] == {"_id": 0}
+
+    def test_add_field_list_as_expression(self):
+        thing = list(Aggify(BaseModel).add_fields(new=[]))
+        assert thing[0]["$addFields"] == {"new": []}
+
+    def test_add_field_cond_as_expression(self):
+        thing = list(Aggify(BaseModel).add_fields(new=Cond("name", "==", "name", 0, 1)))
+        assert thing[0]["$addFields"] == {
+            "new": {"$cond": {"if": {"$eq": ["name", "name"]}, "then": 0, "else": 1}}
+        }
+
+    def test_annotate_int_field(self):
+        thing = list(Aggify(BaseModel).group("name").annotate("name", "first", 2))
+        assert thing[0]["$group"] == {"_id": "$name", "name": {"$first": 2}}
+
+    def test_sequential_matches_combine(self):
+        thing = list(Aggify(BaseModel).filter(name=123).filter(age=123))
+        assert thing[0]["$match"] == {"name": 123, "age": 123}
+
+    def test_get_model_field_invalid_field(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidField):
+            aggify.get_model_field(BaseModel, "username")
+
+    def test_replace_base_invalid_embedded_field(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidEmbeddedField):
+            aggify._replace_base("name")
+
+    def test_aggify_get_item_negative_index(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(MongoIndexError):
+            var = aggify.filter(name=1)[-10]
+
+    def test_aggify_get_item_slice_step_not_none(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(MongoIndexError):
+            var = aggify.filter(name=1)[slice(1, 3, 2)]
+
+    def test_aggify_get_item_slice_start_gte_stop(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(MongoIndexError):
+            var = aggify.filter(name=1)[slice(3, 1)]
+
+    def test_aggify_get_item_slice_negative_start(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(MongoIndexError):
+            var = aggify.filter(name=1)[slice(-5, -1)]

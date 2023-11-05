@@ -1,19 +1,9 @@
-from typing import Any, Type, Union, List, Dict
+from typing import Any, Union, List, Dict
 
 from mongoengine import Document
 
 from aggify.exceptions import MongoIndexError, InvalidField, AlreadyExistsField
-
-
-def int_to_slice(final_index: int) -> slice:
-    """
-    Converts an integer to a slice, assuming that the start index is 0.
-
-    Examples:
-        >>> int_to_slice(3)
-        slice(0, 2)
-    """
-    return slice(0, final_index)
+from aggify.types import CollectionType
 
 
 def to_mongo_positive_index(index: Union[int, slice]) -> slice:
@@ -33,7 +23,7 @@ def to_mongo_positive_index(index: Union[int, slice]) -> slice:
     return index
 
 
-def check_fields_exist(model: Document, fields_to_check: List[str]) -> None:
+def check_fields_exist(model: CollectionType, fields_to_check: List[str]) -> None:
     """
     Check if the specified fields exist in a model's fields.
 
@@ -116,7 +106,7 @@ def convert_match_query(
         return d
 
 
-def check_field_exists(model: Type[Document], field: str) -> None:
+def check_field_exists(model: CollectionType, field: str) -> None:
     """
     Check if a field exists in the given model.
 
@@ -131,7 +121,7 @@ def check_field_exists(model: Type[Document], field: str) -> None:
         raise AlreadyExistsField(field=field)
 
 
-def get_db_field(model: Type[Document], field: str, add_dollar_sign=False) -> str:
+def get_db_field(model: CollectionType, field: str, add_dollar_sign=False) -> str:
     """
     Get the database field name for a given field in the model.
 

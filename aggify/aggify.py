@@ -13,6 +13,7 @@ from aggify.exceptions import (
     OutStageError,
     InvalidArgument,
 )
+
 from aggify.types import QueryParams, AggifyType, CollectionType
 from aggify.utilty import (
     to_mongo_positive_index,
@@ -22,7 +23,6 @@ from aggify.utilty import (
     check_field_exists,
     get_db_field,
 )
-
 
 def last_out_stage_check(method: AggifyType) -> AggifyType:
     """Check if the last stage is $out or not
@@ -112,18 +112,24 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def group(self, expression: Union[str, None] = "_id") -> "Aggify":
-        expression = f"${expression}" if expression else None
+    def group(self, expression: Union[str, None] = "id") -> "Aggify":
+        if expression:
+            check_fields_exist(self.base_model, [expression])
+        expression = (
+            get_db_field(self.base_model, expression, add_dollar_sign=True)
+            if expression
+            else None
+        )
         self.pipelines.append({"$group": {"_id": expression}})
         return self
 
     @last_out_stage_check
-    def order_by(self, *fields: Union[str, List[str]]) -> "Aggify":
+    def order_by(self, *order_fields: Union[str, List[str]]) -> "Aggify":
         sort_dict = {
             get_db_field(self.base_model, field.replace("-", "")): -1
             if field.startswith("-")
-            else 1  # noqa
-            for field in fields
+            else 1
+            for field in order_fields
         }
         self.pipelines.append({"$sort": sort_dict})
         return self
@@ -164,7 +170,9 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def filter(self, arg: Union[Q, None] = None, **kwargs: QueryParams) -> "Aggify":
+    def filter(
+        self, arg: Union[Q, None] = None, **kwargs: Union[QueryParams, F, list]
+    ) -> "Aggify":
         """
         # TODO: missing docs
         """
@@ -225,11 +233,8 @@ class Aggify:
         """
         Builds the pipelines list based on the query parameters.
         """
-        skip_list = []
 
         for key, value in query.items():
-            if key in skip_list:
-                continue
 
             # Split the key to access the field information.
             split_query = key.split("__")
@@ -263,7 +268,6 @@ class Aggify:
                 matches = []
                 for k, v in query.items():
                     if k.split("__")[0] == split_query[0]:
-                        skip_list.append(k)
                         _key = k.replace("__", ".", 1)
                         match = self.__match({_key: v}).get("$match")
                         if match != {}:
@@ -296,7 +300,7 @@ class Aggify:
     def unwind(
         self,
         path: str,
-        include_index_array: Union[str, None] = None,
+        include_array_index: Union[str, None] = None,
         preserve: bool = False,
     ) -> "Aggify":
         """Generates a MongoDB unwind pipeline stage.
@@ -306,7 +310,7 @@ class Aggify:
               To specify a field path, prefix the field name with a dollar sign $
               and enclose in quotes.
 
-            include_index_array: The name of a new field to hold the array index of the element.
+            include_array_index: The name of a new field to hold the array index of the element.
               The name cannot start with a dollar sign $.
 
             preserve: Whether to preserve null and empty arrays.
@@ -330,29 +334,19 @@ class Aggify:
 
         docs: https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/
         """
-
-        if include_index_array is None and preserve is False:
-            self.pipelines.append({"$unwind": f"${path}"})
-            return self
-        self.pipelines.append(
-            {
-                "$unwind": {
-                    "path": f"${path}",
-                    "includeArrayIndex": include_index_array,
-                    "preserveNullAndEmptyArrays": preserve,
-                }
-            }
-        )
+        path = self.get_field_name_recursively(path)
+        if include_array_index is None and preserve is False:
+            unwind_stage = {"$unwind": f"${path}"}
+        else:
+            unwind_stage = {"$unwind": {"path": f"${path}"}}
+            if preserve:
+                unwind_stage["$unwind"]["preserveNullAndEmptyArrays"] = preserve
+            if include_array_index:
+                unwind_stage["$unwind"][
+                    "includeArrayIndex"
+                ] = include_array_index.replace("$", "")
+        self.pipelines.append(unwind_stage)
         return self
-
-    def aggregate(self):
-        """
-        Returns the aggregated results.
-
-        Returns:
-            The aggregated results.
-        """
-        return self.base_model.objects.aggregate(*self.pipelines)  # type: ignore
 
     def annotate(
         self, annotate_name: str, accumulator: str, f: Union[Union[str, Dict], F, int]
@@ -425,8 +419,7 @@ class Aggify:
         else:
             if isinstance(f, str):
                 try:
-                    self.get_model_field(self.base_model, f)  # noqa
-                    value = f"${f}"
+                    value = f"${self.get_field_name_recursively(f)}"
                 except InvalidField:
                     value = f
             else:
@@ -525,6 +518,7 @@ class Aggify:
 
             # Move to the next level in the model hierarchy
             prev_base = self.get_model_field(prev_base, item)
+            prev_base = prev_base.__dict__.get("document_type_obj", prev_base)
 
         # Join the entire hierarchy using dots and return
         return ".".join(field_name)
@@ -534,7 +528,7 @@ class Aggify:
         self,
         from_collection: CollectionType,
         as_name: str,
-        query: Union[List[Q], Union[Q, None]] = None,
+        query: Union[List[Q], Union[Q, None], List["Aggify"]] = None,
         let: Union[List[str], None] = None,
         local_field: Union[str, None] = None,
         foreign_field: Union[str, None] = None,
@@ -546,9 +540,16 @@ class Aggify:
             from_collection (Document): The document representing the collection to perform the lookup on.
             as_name (str): The name of the new field to create.
             query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
+<<<<<<< HEAD
             let (Union[List[str], None], optional): The local field(s) to join on. If provided, localField and foreignField are not used.
             local_field (Union[str, None], optional): The local field to join on when `let` is not provided.
             foreign_field (Union[str, None], optional): The foreign field to join on when `let` is not provided.
+=======
+            let (Union[List[str], None], optional): The local field(s) to join on. If provided,
+            localField and foreignField are not used.
+            local_field (Union[str, None], optional): The local field to join on when let not provided.
+            foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
+>>>>>>> main
 
         Returns:
             Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
@@ -563,8 +564,6 @@ class Aggify:
                 expected_list=[["local_field", "foreign_field"], "let"]
             )
         elif not let:
-            if not (local_field and foreign_field):
-                raise InvalidArgument(expected_list=["local_field", "foreign_field"])
             lookup_stage = {
                 "$lookup": {
                     "from": from_collection_name,
@@ -624,7 +623,7 @@ class Aggify:
         Get the field definition of a specified field in a MongoDB model.
 
         Args:
-            model (Document): The MongoDB model.
+            model (CollectionType): The MongoDB model.
             field (str): The name of the field to retrieve.
 
         Returns:
@@ -744,15 +743,15 @@ class Aggify:
         # List of valid redaction values
         redact_values = ["DESCEND", "PRUNE", "KEEP"]
 
-        def clean_then_else(then_value, else_value):
+        def clean_then_else(_then_value, _else_value):
             """
             Helper function to sanitize then_value and else_value.
 
             Strips the dollar sign and converts values to uppercase.
             """
             return (
-                then_value.replace("$", "").upper(),
-                else_value.replace("$", "").upper(),
+                _then_value.replace("$", "").upper(),
+                _else_value.replace("$", "").upper(),
             )
 
         # Clean the provided then_value and else_value
