@@ -1,5 +1,5 @@
 import pytest
-from mongoengine import Document, IntField, StringField, UUIDField
+from mongoengine import Document, IntField, StringField
 
 from aggify import Aggify, Cond, F, Q
 from aggify.exceptions import (
@@ -593,19 +593,23 @@ class TestAggify:
     def test_aggify_get_item_negative_index(self):
         aggify = Aggify(BaseModel)
         with pytest.raises(MongoIndexError):
+            # noinspection PyUnusedLocal
             var = aggify.filter(name=1)[-10]
 
     def test_aggify_get_item_slice_step_not_none(self):
         aggify = Aggify(BaseModel)
         with pytest.raises(MongoIndexError):
+            # noinspection PyUnusedLocal
             var = aggify.filter(name=1)[slice(1, 3, 2)]
 
     def test_aggify_get_item_slice_start_gte_stop(self):
         aggify = Aggify(BaseModel)
         with pytest.raises(MongoIndexError):
+            # noinspection PyUnusedLocal
             var = aggify.filter(name=1)[slice(3, 1)]
 
     def test_aggify_get_item_slice_negative_start(self):
         aggify = Aggify(BaseModel)
         with pytest.raises(MongoIndexError):
+            # noinspection PyUnusedLocal
             var = aggify.filter(name=1)[slice(-5, -1)]

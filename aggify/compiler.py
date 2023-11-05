@@ -247,7 +247,7 @@ class Match:
         try:
             operator = _op[1]
         except IndexError:
-            raise InvalidOperator(_op) from None
+            raise InvalidOperator(str(_op)) from None
 
         if operator not in Operators.COMPARISON_OPERATORS:
             raise InvalidOperator(operator)

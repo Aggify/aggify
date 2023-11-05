@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, Type, Union, List, TypeVar, Callable
+from typing import Any, Dict, Type, Union, List
 
 from mongoengine import Document, EmbeddedDocument, fields as mongoengine_fields
 from mongoengine.base import TopLevelDocumentMetaclass
@@ -13,7 +13,7 @@ from aggify.exceptions import (
     OutStageError,
     InvalidArgument,
 )
-from aggify.types import QueryParams
+from aggify.types import QueryParams, AggifyType, CollectionType
 from aggify.utilty import (
     to_mongo_positive_index,
     check_fields_exist,
@@ -22,9 +22,6 @@ from aggify.utilty import (
     check_field_exists,
     get_db_field,
 )
-
-AggifyType = TypeVar("AggifyType", bound=Callable[..., "Aggify"])
-CollectionType = TypeVar("CollectionType", bound=Callable[..., "Document"])
 
 
 def last_out_stage_check(method: AggifyType) -> AggifyType:
@@ -167,9 +164,9 @@ class Aggify:
             else:
                 raise AggifyValueError([str, F, list], type(expression))
             # TODO: Should be checked if new field is embedded, create embedded field.
-            self.base_model._fields[
+            self.base_model._fields[  # noqa
                 field.replace("$", "")
-            ] = mongoengine_fields.IntField()  # noqa
+            ] = mongoengine_fields.IntField()
 
         self.pipelines.append(add_fields_stage)
         return self
@@ -375,6 +372,7 @@ class Aggify:
         """
 
         # Some of the accumulator fields might be false and should be checked.
+        # noinspection SpellCheckingInspection
         aggregation_mapping: Dict[str, Type] = {
             "sum": (mongoengine_fields.FloatField(), "$sum"),
             "avg": (mongoengine_fields.FloatField(), "$avg"),
@@ -555,25 +553,23 @@ class Aggify:
         foreign_field: Union[str, None] = None,
     ) -> "Aggify":
         """
-                Generates a MongoDB lookup pipeline stage.
+            Generates a MongoDB lookup pipeline stage.
 
-                Args:
-                    from_collection (Document): The document representing the collection to perform the lookup on.
-                    as_name (str): The name of the new field to create.
-                    query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
-        <<<<<<< HEAD
-                    let (Union[List[str], None], optional): The local field(s) to join on. If provided, localField and foreignField are not used.
-                    local_field (Union[str, None], optional): The local field to join on when `let` is not provided.
-                    foreign_field (Union[str, None], optional): The foreign field to join on when `let` is not provided.
-        =======
-                    let (Union[List[str], None], optional): The local field(s) to join on. If provided,
-                    localField and foreignField are not used.
-                    local_field (Union[str, None], optional): The local field to join on when let not provided.
-                    foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
-        >>>>>>> main
+            Args:
+                from_collection (Document): The document representing the collection to perform the lookup on.
+                as_name (str): The name of the new field to create.
+                query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
+                let (Union[List[str], None], optional): The local field(s) to join on. If provided,
+                localField and foreignField are not used.
+                local_field (Union[str, None], optional): The local field to join on when `let` is not provided.
+                foreign_field (Union[str, None], optional): The foreign field to join on when `let` is not provided.
+                let (Union[List[str], None], optional): The local field(s) to join on. If provided,
+                localField and foreignField are not used.
+                local_field (Union[str, None], optional): The local field to join on when let not provided.
+                foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
 
-                Returns:
-                    Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
+            Returns:
+                Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
         """
 
         lookup_stages = []

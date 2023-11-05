@@ -1,7 +1,7 @@
 from typing import Any, Union, List, Dict
 
 from mongoengine import Document
-
+from aggify.types import CollectionType
 from aggify.exceptions import MongoIndexError, InvalidField, AlreadyExistsField
 
 
@@ -22,7 +22,7 @@ def to_mongo_positive_index(index: Union[int, slice]) -> slice:
     return index
 
 
-def check_fields_exist(model, fields_to_check: List[str]) -> None:
+def check_fields_exist(model: CollectionType, fields_to_check: List[str]) -> None:
     """
     Check if the specified fields exist in a model's fields.
 
@@ -105,7 +105,7 @@ def convert_match_query(
         return d
 
 
-def check_field_exists(model, field: str) -> None:
+def check_field_exists(model: CollectionType, field: str) -> None:
     """
     Check if a field exists in the given model.
 
@@ -120,7 +120,7 @@ def check_field_exists(model, field: str) -> None:
         raise AlreadyExistsField(field=field)
 
 
-def get_db_field(model, field: str, add_dollar_sign=False) -> str:
+def get_db_field(model: CollectionType, field: str, add_dollar_sign=False) -> str:
     """
     Get the database field name for a given field in the model.
 
