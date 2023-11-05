@@ -24,6 +24,7 @@ from aggify.utilty import (
     get_db_field,
 )
 
+
 def last_out_stage_check(method: AggifyType) -> AggifyType:
     """Check if the last stage is $out or not
 

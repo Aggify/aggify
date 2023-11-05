@@ -107,7 +107,7 @@ class Q:
         yield "$match", self.conditions
 
     def __or__(self, other):
-        if self.conditions.get("$or", None):
+        if self.conditions.get("$or"):
             self.conditions["$or"].append(dict(other)["$match"])
             combined_conditions = self.conditions
 
@@ -116,7 +116,7 @@ class Q:
         return Q(**combined_conditions)
 
     def __and__(self, other):
-        if self.conditions.get("$and", None):
+        if self.conditions.get("$and"):
             self.conditions["$and"].append(dict(other)["$match"])
             combined_conditions = self.conditions
         else:

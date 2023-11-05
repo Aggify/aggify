@@ -22,6 +22,29 @@ class TestQ:
             }
         }
 
+    def test_and(self):
+        q1 = Q(name="Mahdi")
+        q2 = Q(age__gt=20)
+        q = q1 & q2
+
+        assert dict(q) == {
+            "$match": {
+                "$and": [dict(q1)["$match"], dict(q2)["$match"]]
+            }
+        }
+
+    def test_multiple_and(self):
+        q1 = Q(name="Mahdi")
+        q2 = Q(age__gt=20)
+        q3 = Q(age__lt=30)
+        q = q1 & q2 & q3
+
+        assert dict(q) == {
+            "$match": {
+                "$and": [dict(q1)["$match"], dict(q2)["$match"], dict(q3)['$match']]
+            }
+        }
+
     # Test combining NOT operators with AND
     def test_combine_not_operators_with_and(self):
         q1 = Q(name="John")
