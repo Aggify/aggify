@@ -82,11 +82,6 @@ class Operators:
                 }
             else:
                 self.match_query[field] = {Operators.ALL_OPERATORS[operator]: value}
-        else:
-            # Default behavior
-            self.match_query[field] = {
-                Operators.ALL_OPERATORS.get(operator, operator): value
-            }
 
         return self.match_query
 
