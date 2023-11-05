@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, Type, Union, List
+from typing import Any, Dict, Type, Union, List, TypeVar, Callable
 
 from mongoengine import Document, EmbeddedDocument, fields as mongoengine_fields
 from mongoengine.base import TopLevelDocumentMetaclass
@@ -13,7 +13,7 @@ from aggify.exceptions import (
     OutStageError,
     InvalidArgument,
 )
-from aggify.types import QueryParams, AggifyType, CollectionType
+from aggify.types import QueryParams, CollectionType
 from aggify.utilty import (
     to_mongo_positive_index,
     check_fields_exist,
@@ -22,6 +22,8 @@ from aggify.utilty import (
     check_field_exists,
     get_db_field,
 )
+
+AggifyType = TypeVar("AggifyType", bound=Callable[..., "Aggify"])
 
 
 def last_out_stage_check(method: AggifyType) -> AggifyType:
