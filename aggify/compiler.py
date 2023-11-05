@@ -18,6 +18,7 @@ class Operators:
         "endswith": "$regex",
         "iendswith": "$regex",  # noqa
         "in": "$in",
+        "nin": "$nin",
         "ne": "$ne",
         "not": "$not",
     }
