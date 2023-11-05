@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Dict, Type, Union, List
 
-from mongoengine import Document, EmbeddedDocument, fields
+from mongoengine import Document, EmbeddedDocument, fields as mongoengine_fields
 from mongoengine.base import TopLevelDocumentMetaclass
 
 from aggify.compiler import F, Match, Q, Operators, Cond  # noqa keep
@@ -95,7 +95,7 @@ class Aggify:
                 kwargs[key], (str, dict)
             ):
                 to_keep_values.add(key)
-                self.base_model._fields[key] = fields.IntField()  # noqa
+                self.base_model._fields[key] = mongoengine_fields.IntField()  # noqa
             projection[get_db_field(self.base_model, key)] = value  # noqa
 
         # Remove fields from the base model, except the ones in to_keep_values and possibly _id
@@ -135,8 +135,7 @@ class Aggify:
 
     @last_out_stage_check
     def add_fields(self, **_fields) -> "Aggify":  # noqa
-        """
-        Generates a MongoDB addFields pipeline stage.
+        """Generates a MongoDB addFields pipeline stage.
 
         Args:
             _fields: A dictionary of field expressions and values.
@@ -159,7 +158,7 @@ class Aggify:
             else:
                 raise AggifyValueError([str, F, list], type(expression))
             # TODO: Should be checked if new field is embedded, create embedded field.
-            self.base_model._fields[field.replace("$", "")] = fields.IntField()  # noqa
+            self.base_model._fields[field.replace("$", "")] = mongoengine_fields.IntField()  # noqa
 
         self.pipelines.append(add_fields_stage)
         return self
@@ -379,30 +378,30 @@ class Aggify:
 
         # Some of the accumulator fields might be false and should be checked.
         aggregation_mapping: Dict[str, Type] = {
-            "sum": (fields.FloatField(), "$sum"),
-            "avg": (fields.FloatField(), "$avg"),
-            "stdDevPop": (fields.FloatField(), "$stdDevPop"),
-            "stdDevSamp": (fields.FloatField(), "$stdDevSamp"),
-            "push": (fields.ListField(), "$push"),
-            "addToSet": (fields.ListField(), "$addToSet"),
-            "count": (fields.IntField(), "$count"),
-            "first": (fields.EmbeddedDocumentField(fields.EmbeddedDocument), "$first"),
-            "last": (fields.EmbeddedDocumentField(fields.EmbeddedDocument), "$last"),
-            "max": (fields.DynamicField(), "$max"),
-            "accumulator": (fields.DynamicField(), "$accumulator"),
-            "min": (fields.DynamicField(), "$min"),
-            "median": (fields.DynamicField(), "$median"),
-            "mergeObjects": (fields.DictField(), "$mergeObjects"),
-            "top": (fields.EmbeddedDocumentField(fields.EmbeddedDocument), "$top"),
+            "sum": (mongoengine_fields.FloatField(), "$sum"),
+            "avg": (mongoengine_fields.FloatField(), "$avg"),
+            "stdDevPop": (mongoengine_fields.FloatField(), "$stdDevPop"),
+            "stdDevSamp": (mongoengine_fields.FloatField(), "$stdDevSamp"),
+            "push": (mongoengine_fields.ListField(), "$push"),
+            "addToSet": (mongoengine_fields.ListField(), "$addToSet"),
+            "count": (mongoengine_fields.IntField(), "$count"),
+            "first": (mongoengine_fields.EmbeddedDocumentField(mongoengine_fields.EmbeddedDocument), "$first"),
+            "last": (mongoengine_fields.EmbeddedDocumentField(mongoengine_fields.EmbeddedDocument), "$last"),
+            "max": (mongoengine_fields.DynamicField(), "$max"),
+            "accumulator": (mongoengine_fields.DynamicField(), "$accumulator"),
+            "min": (mongoengine_fields.DynamicField(), "$min"),
+            "median": (mongoengine_fields.DynamicField(), "$median"),
+            "mergeObjects": (mongoengine_fields.DictField(), "$mergeObjects"),
+            "top": (mongoengine_fields.EmbeddedDocumentField(mongoengine_fields.EmbeddedDocument), "$top"),
             "bottom": (
-                fields.EmbeddedDocumentField(fields.EmbeddedDocument),
+                mongoengine_fields.EmbeddedDocumentField(mongoengine_fields.EmbeddedDocument),
                 "$bottom",
             ),
-            "topN": (fields.ListField(), "$topN"),
-            "bottomN": (fields.ListField(), "$bottomN"),
-            "firstN": (fields.ListField(), "$firstN"),
-            "lastN": (fields.ListField(), "$lastN"),
-            "maxN": (fields.ListField(), "$maxN"),
+            "topN": (mongoengine_fields.ListField(), "$topN"),
+            "bottomN": (mongoengine_fields.ListField(), "$bottomN"),
+            "firstN": (mongoengine_fields.ListField(), "$firstN"),
+            "lastN": (mongoengine_fields.ListField(), "$lastN"),
+            "maxN": (mongoengine_fields.ListField(), "$maxN"),
         }
 
         try:
@@ -620,7 +619,7 @@ class Aggify:
         return self
 
     @staticmethod
-    def get_model_field(model: Type[Document], field: str) -> fields:
+    def get_model_field(model: Type[Document], field: str) -> mongoengine_fields:
         """
         Get the field definition of a specified field in a MongoDB model.
 
