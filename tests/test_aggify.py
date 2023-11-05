@@ -11,6 +11,7 @@ from aggify.exceptions import (
     InvalidOperator,
     AlreadyExistsField,
     InvalidEmbeddedField,
+    MongoIndexError,
 )
 
 
@@ -597,3 +598,19 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         with pytest.raises(InvalidEmbeddedField):
             aggify._replace_base("name")
+
+    def test_aggify_get_item_negative_index(self):
+        with pytest.raises(MongoIndexError):
+            var = Aggify(BaseModel).filter(name=1)[-1:1]
+
+    def test_aggify_get_item_slice_step_not_none(self):
+        with pytest.raises(MongoIndexError):
+            var = Aggify(BaseModel).filter(name=1)[slice(1, 3, 2)]
+
+    def test_aggify_get_item_slice_start_gte_stop(self):
+        with pytest.raises(MongoIndexError):
+            var = Aggify(BaseModel).filter(name=1)[slice(3, 1)]
+
+    def test_aggify_get_item_slice_negative_start(self):
+        with pytest.raises(MongoIndexError):
+            var = Aggify(BaseModel).filter(name=1)[slice(-5, -1)]
