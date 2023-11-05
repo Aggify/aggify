@@ -31,11 +31,7 @@ class TestQ:
         q2 = Q(age__gt=20)
         q = q1 & q2
 
-        assert dict(q) == {
-            "$match": {
-                "$and": [dict(q1)["$match"], dict(q2)["$match"]]
-            }
-        }
+        assert dict(q) == {"$match": {"$and": [dict(q1)["$match"], dict(q2)["$match"]]}}
 
     def test_multiple_and(self):
         q1 = Q(name="Mahdi")
@@ -45,7 +41,7 @@ class TestQ:
 
         assert dict(q) == {
             "$match": {
-                "$and": [dict(q1)["$match"], dict(q2)["$match"], dict(q3)['$match']]
+                "$and": [dict(q1)["$match"], dict(q2)["$match"], dict(q3)["$match"]]
             }
         }
 

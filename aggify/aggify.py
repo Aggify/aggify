@@ -165,7 +165,9 @@ class Aggify:
             else:
                 raise AggifyValueError([str, F, list], type(expression))
             # TODO: Should be checked if new field is embedded, create embedded field.
-            self.base_model._fields[field.replace("$", "")] = mongoengine_fields.IntField()  # noqa
+            self.base_model._fields[
+                field.replace("$", "")
+            ] = mongoengine_fields.IntField()  # noqa
 
         self.pipelines.append(add_fields_stage)
         return self
@@ -236,7 +238,6 @@ class Aggify:
         """
 
         for key, value in query.items():
-
             # Split the key to access the field information.
             split_query = key.split("__")
 
@@ -380,16 +381,33 @@ class Aggify:
             "push": (mongoengine_fields.ListField(), "$push"),
             "addToSet": (mongoengine_fields.ListField(), "$addToSet"),
             "count": (mongoengine_fields.IntField(), "$count"),
-            "first": (mongoengine_fields.EmbeddedDocumentField(mongoengine_fields.EmbeddedDocument), "$first"),
-            "last": (mongoengine_fields.EmbeddedDocumentField(mongoengine_fields.EmbeddedDocument), "$last"),
+            "first": (
+                mongoengine_fields.EmbeddedDocumentField(
+                    mongoengine_fields.EmbeddedDocument
+                ),
+                "$first",
+            ),
+            "last": (
+                mongoengine_fields.EmbeddedDocumentField(
+                    mongoengine_fields.EmbeddedDocument
+                ),
+                "$last",
+            ),
             "max": (mongoengine_fields.DynamicField(), "$max"),
             "accumulator": (mongoengine_fields.DynamicField(), "$accumulator"),
             "min": (mongoengine_fields.DynamicField(), "$min"),
             "median": (mongoengine_fields.DynamicField(), "$median"),
             "mergeObjects": (mongoengine_fields.DictField(), "$mergeObjects"),
-            "top": (mongoengine_fields.EmbeddedDocumentField(mongoengine_fields.EmbeddedDocument), "$top"),
+            "top": (
+                mongoengine_fields.EmbeddedDocumentField(
+                    mongoengine_fields.EmbeddedDocument
+                ),
+                "$top",
+            ),
             "bottom": (
-                mongoengine_fields.EmbeddedDocumentField(mongoengine_fields.EmbeddedDocument),
+                mongoengine_fields.EmbeddedDocumentField(
+                    mongoengine_fields.EmbeddedDocument
+                ),
                 "$bottom",
             ),
             "topN": (mongoengine_fields.ListField(), "$topN"),
@@ -535,25 +553,25 @@ class Aggify:
         foreign_field: Union[str, None] = None,
     ) -> "Aggify":
         """
-        Generates a MongoDB lookup pipeline stage.
+                Generates a MongoDB lookup pipeline stage.
 
-        Args:
-            from_collection (Document): The document representing the collection to perform the lookup on.
-            as_name (str): The name of the new field to create.
-            query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
-<<<<<<< HEAD
-            let (Union[List[str], None], optional): The local field(s) to join on. If provided, localField and foreignField are not used.
-            local_field (Union[str, None], optional): The local field to join on when `let` is not provided.
-            foreign_field (Union[str, None], optional): The foreign field to join on when `let` is not provided.
-=======
-            let (Union[List[str], None], optional): The local field(s) to join on. If provided,
-            localField and foreignField are not used.
-            local_field (Union[str, None], optional): The local field to join on when let not provided.
-            foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
->>>>>>> main
+                Args:
+                    from_collection (Document): The document representing the collection to perform the lookup on.
+                    as_name (str): The name of the new field to create.
+                    query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
+        <<<<<<< HEAD
+                    let (Union[List[str], None], optional): The local field(s) to join on. If provided, localField and foreignField are not used.
+                    local_field (Union[str, None], optional): The local field to join on when `let` is not provided.
+                    foreign_field (Union[str, None], optional): The foreign field to join on when `let` is not provided.
+        =======
+                    let (Union[List[str], None], optional): The local field(s) to join on. If provided,
+                    localField and foreignField are not used.
+                    local_field (Union[str, None], optional): The local field to join on when let not provided.
+                    foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
+        >>>>>>> main
 
-        Returns:
-            Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
+                Returns:
+                    Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
         """
 
         lookup_stages = []

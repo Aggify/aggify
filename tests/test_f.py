@@ -5,30 +5,30 @@ class TestF:
     def test_subtraction(self):
         f1 = F("age")
         f2 = F("income")
-        f3 = F('x')
+        f3 = F("x")
         f_combined = f1 - f2 - f3
         assert f_combined.to_dict() == {"$subtract": ["$age", "$income", "$x"]}
 
     def test_division(self):
         f1 = F("income")
         f2 = F("expenses")
-        f3 = F('x')
+        f3 = F("x")
         f_combined = f1 / f2 / f3
         assert f_combined.to_dict() == {"$divide": ["$income", "$expenses", "$x"]}
 
     def test_multiplication(self):
         f1 = F("quantity")
         f2 = F("price")
-        f3 = F('x')
+        f3 = F("x")
         f_combined = f1 * f2 * f3
         assert f_combined.to_dict() == {"$multiply": ["$quantity", "$price", "$x"]}
 
     def test_addition(self):
-        f1 = F('income')
-        f2 = F('interest')
-        f3 = F('x')
+        f1 = F("income")
+        f2 = F("interest")
+        f3 = F("x")
         f = f1 + f2 + f3
-        assert f.to_dict() == {"$add": ['$income', "$interest", "$x"]}
+        assert f.to_dict() == {"$add": ["$income", "$interest", "$x"]}
 
     def test_addition_with_constant(self):
         f1 = F("age")

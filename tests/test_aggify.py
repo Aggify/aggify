@@ -143,30 +143,24 @@ class TestAggify:
             aggify.add_fields(**fields)
 
     @pytest.mark.parametrize(
-        ('fields', 'expected'),
+        ("fields", "expected"),
         (
-            (
-                {"scores__age": "Mahdi"},
-                {"scores.age": {"$literal": "Mahdi"}}
-            ),
+            ({"scores__age": "Mahdi"}, {"scores.age": {"$literal": "Mahdi"}}),
             (
                 {"new_field": F("existing_field") + 10},
-                {"new_field": {"$add": ["$existing_field", 10]}}
+                {"new_field": {"$add": ["$existing_field", 10]}},
             ),
-            (
-                {'array': [1, 2, 3, 4]},
-                {'array': [1, 2, 3, 4]}
-            ),
+            ({"array": [1, 2, 3, 4]}, {"array": [1, 2, 3, 4]}),
             (
                 {"cond": Cond(30, "==", 30, "Equal", "Not Equal")},
-                {"cond": dict(Cond(30, "==", 30, "Equal", "Not Equal"))}
-            )
-        )
+                {"cond": dict(Cond(30, "==", 30, "Equal", "Not Equal"))},
+            ),
+        ),
     )
     def test_add_fields(self, fields, expected):
         aggify = Aggify(BaseModel)
         add_fields_stage = aggify.add_fields(**fields)
-        assert add_fields_stage.pipelines[0]['$addFields'] == expected
+        assert add_fields_stage.pipelines[0]["$addFields"] == expected
 
     def test_filter_value_error(self):
         with pytest.raises(AggifyValueError):
