@@ -576,8 +576,6 @@ class Aggify:
                 expected_list=[["local_field", "foreign_field"], "let"]
             )
         elif not let:
-            if not (local_field and foreign_field):
-                raise InvalidArgument(expected_list=["local_field", "foreign_field"])
             lookup_stage = {
                 "$lookup": {
                     "from": from_collection_name,
