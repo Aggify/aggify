@@ -2,7 +2,12 @@ import pytest
 from mongoengine import Document, IntField, StringField
 
 from aggify import Aggify, Cond, F, Q
-from aggify.exceptions import AggifyValueError, AnnotationError, OutStageError
+from aggify.exceptions import (
+    AggifyValueError,
+    AnnotationError,
+    OutStageError,
+    InvalidArgument,
+)
 
 
 class BaseModel(Document):
@@ -462,3 +467,55 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         with pytest.raises(ValueError):
             aggify.filter(name__contains=F("age"))
+
+    def test_aggregate_failed_connection(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(ValueError):
+            aggify.filter(name__contains=F("age")).aggregate()
+
+    def test_annotate_str_field_as_value_but_not_base_model_field(self):
+        thing = list(Aggify(BaseModel).group("name").annotate("age", "sum", "test"))
+        assert thing[0]["$group"] == {"_id": "$name", "age": {"$sum": "test"}}
+
+    def test_lookup_not_pass_let_and_local_field_and_foreign_field(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidArgument):
+            aggify.lookup(BaseModel, as_name="test")
+
+    def test_lookup_pass_let_and_not_pass_query(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidArgument):
+            aggify.lookup(BaseModel, as_name="test", let=["123"])
+
+    def test_redact_invalid_value(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidArgument):
+            aggify.redact("name", "==", "age", "123", "456")
+
+    def test_redact(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.redact("name", "==", "age", "PRune", "$$$$keep"))
+        assert thing[0]["$redact"] == {
+            "$cond": {
+                "if": {"$eq": ["name", "age"]},
+                "then": "$$PRUNE",
+                "else": "$$KEEP",
+            }
+        }
+
+    def test_lookup_use_aggify_instance_in_query(self):
+        aggify = Aggify(BaseModel)
+        thing = list(
+            aggify.lookup(
+                BaseModel,
+                let=["name"],
+                as_name="__",
+                query=[Aggify(BaseModel).filter(name=123)],
+            )
+        )
+        assert thing[0]["$lookup"] == {
+            "from": None,
+            "let": {"name": "$name"},
+            "pipeline": [{"$match": {"name": 123}}],
+            "as": "__",
+        }

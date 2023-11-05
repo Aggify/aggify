@@ -45,8 +45,8 @@ def check_fields_exist(model: Document, fields_to_check: List[str]) -> None:
         InvalidField: If any of the specified fields are missing in the model's fields.
     """
     missing_fields = [
-        field for field in fields_to_check if not model._fields.get(field)
-    ]  # noqa
+        field for field in fields_to_check if not model._fields.get(field)  # noqa
+    ]
     if missing_fields:
         raise InvalidField(field=missing_fields[0])
 
@@ -81,18 +81,16 @@ def replace_values_recursive(obj, replacements):
 def convert_match_query(
     d: Dict,
 ) -> Union[Dict[Any, Union[List[Union[str, Any]], Dict]], List[Dict], Dict]:
-    pass
-
     """
-    Recursively transform a dictionary to modify the structure of '$eq' and '$ne' operators.
+    Recursively transform a dictionary to modify the structure of operators.
 
     Args:
     d (dict or any): The input dictionary to be transformed.
 
     Returns:
-    dict or any: The transformed dictionary with '$eq' and '$ne' operators modified.
+    dict or any: The transformed dictionary with operators modified.
 
-    This function recursively processes the input dictionary, looking for '$eq' and '$ne' operators
+    This function recursively processes the input dictionary, looking for operators
     within sub-dictionaries. When found, it restructures the data into the format {'$eq' or '$ne': [field, value]}.
     For other fields, it processes them recursively to maintain the dictionary structure.
 
@@ -105,7 +103,8 @@ def convert_match_query(
     if isinstance(d, dict):
         new_dict = {}
         for key, value in d.items():
-            if isinstance(value, dict) and ("$eq" in value or "$ne" in value):
+            operators = {"$eq", "$ne", "$gt", "$lt", "$gte", "lte"}
+            if isinstance(value, dict) and any(op in value for op in operators):
                 for operator, operand in value.items():
                     new_dict[operator] = [f"${key}", operand]
             else:
