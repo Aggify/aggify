@@ -137,35 +137,31 @@ class TestAggify:
             }
             aggify.add_fields(**fields)
 
-    def test_add_fields_string_literal(self):
+    @pytest.mark.parametrize(
+        ('fields', 'expected'),
+        (
+            (
+                {"scores__age": "Mahdi"},
+                {"scores.age": {"$literal": "Mahdi"}}
+            ),
+            (
+                {"new_field": F("existing_field") + 10},
+                {"new_field": {"$add": ["$existing_field", 10]}}
+            ),
+            (
+                {'array': [1, 2, 3, 4]},
+                {'array': [1, 2, 3, 4]}
+            ),
+            (
+                {"cond": Cond(30, "==", 30, "Equal", "Not Equal")},
+                {"cond": dict(Cond(30, "==", 30, "Equal", "Not Equal"))}
+            )
+        )
+    )
+    def test_add_fields(self, fields, expected):
         aggify = Aggify(BaseModel)
-        fields = {"new_field_1": "some_string", "new_field_2": "another_string"}
         add_fields_stage = aggify.add_fields(**fields)
-
-        expected_stage = {
-            "$addFields": {
-                "new_field_1": {"$literal": "some_string"},
-                "new_field_2": {"$literal": "another_string"},
-            }
-        }
-
-        assert add_fields_stage.pipelines[0] == expected_stage
-
-    def test_add_fields_with_f_expression(self):
-        aggify = Aggify(BaseModel)
-        fields = {
-            "new_field_1": F("existing_field") + 10,
-            "new_field_2": F("field_a") * F("field_b"),
-        }
-        add_fields_stage = aggify.add_fields(**fields)
-
-        expected_stage = {
-            "$addFields": {
-                "new_field_1": {"$add": ["$existing_field", 10]},
-                "new_field_2": {"$multiply": ["$field_a", "$field_b"]},
-            }
-        }
-        assert add_fields_stage.pipelines[0] == expected_stage
+        assert add_fields_stage.pipelines[0]['$addFields'] == expected
 
     def test_filter_value_error(self):
         with pytest.raises(AggifyValueError):
