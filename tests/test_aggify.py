@@ -592,7 +592,7 @@ class TestAggify:
     def test_get_model_field_invalid_field(self):
         aggify = Aggify(BaseModel)
         with pytest.raises(InvalidField):
-            aggify.get_model_field(BaseModel, "tttttt")
+            aggify.get_model_field(BaseModel, "username")
 
     def test_replace_base_invalid_embedded_field(self):
         aggify = Aggify(BaseModel)
@@ -600,17 +600,21 @@ class TestAggify:
             aggify._replace_base("name")
 
     def test_aggify_get_item_negative_index(self):
+        aggify = Aggify(BaseModel)
         with pytest.raises(MongoIndexError):
-            var = Aggify(BaseModel).filter(name=1)[-1:1]
+            var = aggify.filter(name=1)[-10]
 
     def test_aggify_get_item_slice_step_not_none(self):
+        aggify = Aggify(BaseModel)
         with pytest.raises(MongoIndexError):
-            var = Aggify(BaseModel).filter(name=1)[slice(1, 3, 2)]
+            var = aggify.filter(name=1)[slice(1, 3, 2)]
 
     def test_aggify_get_item_slice_start_gte_stop(self):
+        aggify = Aggify(BaseModel)
         with pytest.raises(MongoIndexError):
-            var = Aggify(BaseModel).filter(name=1)[slice(3, 1)]
+            var = aggify.filter(name=1)[slice(3, 1)]
 
     def test_aggify_get_item_slice_negative_start(self):
+        aggify = Aggify(BaseModel)
         with pytest.raises(MongoIndexError):
-            var = Aggify(BaseModel).filter(name=1)[slice(-5, -1)]
+            var = aggify.filter(name=1)[slice(-5, -1)]
