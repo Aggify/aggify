@@ -64,9 +64,6 @@ class Aggify:
         self.stop = None
         self.q = None
 
-    def __getattr__(self, attr):
-        return getattr(self.base_model, attr)
-
     def __iter__(self):
         # Return a generator or iterator for the data you want to represent as a list
         return iter(self.pipelines)
