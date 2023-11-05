@@ -13,7 +13,7 @@ from aggify.exceptions import (
     OutStageError,
     InvalidArgument,
 )
-from aggify.types import QueryParams
+from aggify.types import QueryParams, CollectionType
 from aggify.utilty import (
     to_mongo_positive_index,
     check_fields_exist,
@@ -23,10 +23,7 @@ from aggify.utilty import (
     get_db_field,
 )
 
-
-AggifyType = TypeVar('AggifyType', bound=Callable[..., "Aggify"])
-CollectionType = TypeVar('CollectionType', bound=Callable[..., "Document"])
-
+AggifyType = TypeVar("AggifyType", bound=Callable[..., "Aggify"])
 
 
 def last_out_stage_check(method: AggifyType) -> AggifyType:
@@ -119,8 +116,14 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def group(self, expression: Union[str, None] = "_id") -> "Aggify":
-        expression = f"${expression}" if expression else None
+    def group(self, expression: Union[str, None] = "id") -> "Aggify":
+        if expression:
+            check_fields_exist(self.base_model, [expression])
+        expression = (
+            get_db_field(self.base_model, expression, add_dollar_sign=True)
+            if expression
+            else None
+        )
         self.pipelines.append({"$group": {"_id": expression}})
         return self
 
@@ -172,7 +175,9 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def filter(self, arg: Union[Q, None] = None, **kwargs: QueryParams) -> "Aggify":
+    def filter(
+        self, arg: Union[Q, None] = None, **kwargs: Union[QueryParams, F, list]
+    ) -> "Aggify":
         """
         # TODO: missing docs
         """
@@ -338,7 +343,7 @@ class Aggify:
 
         docs: https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/
         """
-
+        path = self.get_field_name_recursively(path)
         if include_index_array is None and preserve is False:
             self.pipelines.append({"$unwind": f"${path}"})
             return self
@@ -433,8 +438,7 @@ class Aggify:
         else:
             if isinstance(f, str):
                 try:
-                    self.get_model_field(self.base_model, f)  # noqa
-                    value = f"${f}"
+                    value = f"${self.get_field_name_recursively(f)}"
                 except InvalidField:
                     value = f
             else:
@@ -533,6 +537,7 @@ class Aggify:
 
             # Move to the next level in the model hierarchy
             prev_base = self.get_model_field(prev_base, item)
+            prev_base = prev_base.__dict__.get("document_type_obj", prev_base)
 
         # Join the entire hierarchy using dots and return
         return ".".join(field_name)
@@ -542,7 +547,7 @@ class Aggify:
         self,
         from_collection: CollectionType,
         as_name: str,
-        query: Union[List[Q], Union[Q, None]] = None,
+        query: Union[List[Q], Union[Q, None], List["Aggify"]] = None,
         let: Union[List[str], None] = None,
         local_field: Union[str, None] = None,
         foreign_field: Union[str, None] = None,
@@ -627,12 +632,12 @@ class Aggify:
         return self
 
     @staticmethod
-    def get_model_field(model: Type[Document], field: str) -> fields:
+    def get_model_field(model: CollectionType, field: str) -> fields:
         """
         Get the field definition of a specified field in a MongoDB model.
 
         Args:
-            model (Document): The MongoDB model.
+            model (CollectionType): The MongoDB model.
             field (str): The name of the field to retrieve.
 
         Returns:

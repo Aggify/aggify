@@ -73,7 +73,7 @@ cases = [
             {
                 "$unwind": {
                     "includeArrayIndex": None,
-                    "path": "$owner",
+                    "path": "$owner_id",
                     "preserveNullAndEmptyArrays": True,
                 }
             },
@@ -173,6 +173,42 @@ cases = [
                     ],
                 }
             }
+        ],
+    ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(PostDocument)
+            .lookup(
+                AccountDocument,
+                query=[  # noqa
+                    Q(_id__ne="owner") & Q(username__ne="seyed"),
+                ],
+                let=["owner"],
+                as_name="_posts",
+            )
+            .unwind("_posts")
+        ),
+        expected_query=[
+            {
+                "$lookup": {
+                    "from": "account",
+                    "let": {"owner": "$owner_id"},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$ne": ["$_id", "$$owner"]},
+                                        {"$ne": ["$username", "seyed"]},
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    "as": "_posts",
+                }
+            },
+            {"$unwind": "$_posts"},
         ],
     ),
     ParameterTestCase(
@@ -404,6 +440,22 @@ cases = [
                 }
             },
         ],
+    ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(PostDocument)
+            .group("owner")
+            .annotate("likes", "first", "stat__like_count")
+        ),
+        expected_query=[
+            {"$group": {"_id": "$owner_id", "likes": {"$first": "$stat.like_count"}}}
+        ],
+    ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(PostDocument).group("owner").annotate("sss", "first", "sss")
+        ),
+        expected_query=[{"$group": {"_id": "$owner_id", "sss": {"$first": "sss"}}}],
     ),
 ]
 
