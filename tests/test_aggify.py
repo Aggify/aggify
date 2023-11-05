@@ -412,16 +412,16 @@ class TestAggify:
     @pytest.mark.parametrize(
         "params",
         (
-            {"include_index_array": "Mahdi"},
+            {"include_array_index": "Mahdi"},
             {"preserve": True},
-            {"include_index_array": "Mahdi", "preserve": True},
+            {"include_array_index": "Mahdi", "preserve": True},
         ),
     )
     def test_unwind_with_parameters(self, params):
         aggify = Aggify(BaseModel)
         thing = aggify.unwind("name", **params)
         assert len(thing.pipelines) == 1
-        include = params.get("include_index_array")
+        include = params.get("include_array_index")
         preserve = params.get("preserve")
         if include is not None:
             assert thing.pipelines[-1]["$unwind"]["includeArrayIndex"] == "Mahdi"
