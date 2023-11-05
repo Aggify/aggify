@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, Type, Union, List
+from typing import Any, Dict, Type, Union, List, TypeVar, Callable
 
 from mongoengine import Document, EmbeddedDocument, fields as mongoengine_fields
 from mongoengine.base import TopLevelDocumentMetaclass
@@ -13,8 +13,7 @@ from aggify.exceptions import (
     OutStageError,
     InvalidArgument,
 )
-
-from aggify.types import QueryParams, AggifyType, CollectionType
+from aggify.types import QueryParams
 from aggify.utilty import (
     to_mongo_positive_index,
     check_fields_exist,
@@ -23,6 +22,9 @@ from aggify.utilty import (
     check_field_exists,
     get_db_field,
 )
+
+AggifyType = TypeVar("AggifyType", bound=Callable[..., "Aggify"])
+CollectionType = TypeVar("CollectionType", bound=Callable[..., "Document"])
 
 
 def last_out_stage_check(method: AggifyType) -> AggifyType:
@@ -251,8 +253,8 @@ class Aggify:
                 or "document_type_obj"
                 not in join_field.__dict__  # Check whether this field is a join field or not.
                 or issubclass(
-                    join_field.document_type, EmbeddedDocument  # noqa
-                )  # Check whether this field is embedded field or not
+                join_field.document_type, EmbeddedDocument  # noqa
+            )  # Check whether this field is embedded field or not
                 or len(split_query) == 1
                 or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
             ):
