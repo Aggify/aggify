@@ -72,7 +72,6 @@ cases = [
             },
             {
                 "$unwind": {
-                    "includeArrayIndex": None,
                     "path": "$owner_id",
                     "preserveNullAndEmptyArrays": True,
                 }

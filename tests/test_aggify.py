@@ -8,6 +8,9 @@ from aggify.exceptions import (
     OutStageError,
     InvalidArgument,
     InvalidField,
+    InvalidOperator,
+    AlreadyExistsField,
+    InvalidEmbeddedField,
 )
 
 
@@ -412,16 +415,16 @@ class TestAggify:
     @pytest.mark.parametrize(
         "params",
         (
-            {"include_index_array": "Mahdi"},
+            {"include_array_index": "Mahdi"},
             {"preserve": True},
-            {"include_index_array": "Mahdi", "preserve": True},
+            {"include_array_index": "Mahdi", "preserve": True},
         ),
     )
     def test_unwind_with_parameters(self, params):
         aggify = Aggify(BaseModel)
         thing = aggify.unwind("name", **params)
         assert len(thing.pipelines) == 1
-        include = params.get("include_index_array")
+        include = params.get("include_array_index")
         preserve = params.get("preserve")
         if include is not None:
             assert thing.pipelines[-1]["$unwind"]["includeArrayIndex"] == "Mahdi"
@@ -538,3 +541,59 @@ class TestAggify:
         aggify = Aggify(BaseModel)
         with pytest.raises(InvalidField):
             aggify.unwind("invalid")
+
+    def test_in_operator(self):
+        thing = list(Aggify(BaseModel).filter(name__in=[]))
+        assert thing[0]["$match"] == {"name": {"$in": []}}
+
+    def test_nin_operator(self):
+        thing = list(Aggify(BaseModel).filter(name__nin=[]))
+        assert thing[0]["$match"] == {"name": {"$nin": []}}
+
+    def test_eq_operator(self):
+        thing = list(Aggify(BaseModel).filter(name__exact=[]))
+        assert thing[0]["$match"] == {"name": {"$eq": []}}
+
+    def test_invalid_operator(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidOperator):
+            aggify.filter(name__aggify="test")
+
+    def test_lookup_with_duplicate_as_name(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(AlreadyExistsField):
+            aggify.lookup(
+                BaseModel, local_field="name", foreign_field="name", as_name="name"
+            )
+
+    def test_project_delete_id(self):
+        thing = list(Aggify(BaseModel).project(id=0))
+        assert thing[0]["$project"] == {"_id": 0}
+
+    def test_add_field_list_as_expression(self):
+        thing = list(Aggify(BaseModel).add_fields(new=[]))
+        assert thing[0]["$addFields"] == {"new": []}
+
+    def test_add_field_cond_as_expression(self):
+        thing = list(Aggify(BaseModel).add_fields(new=Cond("name", "==", "name", 0, 1)))
+        assert thing[0]["$addFields"] == {
+            "new": {"$cond": {"if": {"$eq": ["name", "name"]}, "then": 0, "else": 1}}
+        }
+
+    def test_annotate_int_field(self):
+        thing = list(Aggify(BaseModel).group("name").annotate("name", "first", 2))
+        assert thing[0]["$group"] == {"_id": "$name", "name": {"$first": 2}}
+
+    def test_sequential_matches_combine(self):
+        thing = list(Aggify(BaseModel).filter(name=123).filter(age=123))
+        assert thing[0]["$match"] == {"name": 123, "age": 123}
+
+    def test_get_model_field_invalid_field(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidField):
+            aggify.get_model_field(BaseModel, "tttttt")
+
+    def test_replace_base_invalid_embedded_field(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidEmbeddedField):
+            aggify._replace_base("name")
