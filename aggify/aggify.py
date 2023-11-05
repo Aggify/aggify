@@ -309,7 +309,7 @@ class Aggify:
     def unwind(
         self,
         path: str,
-        include_index_array: Union[str, None] = None,
+        include_array_index: Union[str, None] = None,
         preserve: bool = False,
     ) -> "Aggify":
         """Generates a MongoDB unwind pipeline stage.
@@ -319,7 +319,7 @@ class Aggify:
               To specify a field path, prefix the field name with a dollar sign $
               and enclose in quotes.
 
-            include_index_array: The name of a new field to hold the array index of the element.
+            include_array_index: The name of a new field to hold the array index of the element.
               The name cannot start with a dollar sign $.
 
             preserve: Whether to preserve null and empty arrays.
@@ -344,18 +344,17 @@ class Aggify:
         docs: https://www.mongodb.com/docs/manual/reference/operator/aggregation/unwind/
         """
         path = self.get_field_name_recursively(path)
-        if include_index_array is None and preserve is False:
-            self.pipelines.append({"$unwind": f"${path}"})
-            return self
-        self.pipelines.append(
-            {
-                "$unwind": {
-                    "path": f"${path}",
-                    "includeArrayIndex": include_index_array,
-                    "preserveNullAndEmptyArrays": preserve,
-                }
-            }
-        )
+        if include_array_index is None and preserve is False:
+            unwind_stage = {"$unwind": f"${path}"}
+        else:
+            unwind_stage = {"$unwind": {"path": f"${path}"}}
+            if preserve:
+                unwind_stage["$unwind"]["preserveNullAndEmptyArrays"] = preserve
+            if include_array_index:
+                unwind_stage["$unwind"][
+                    "includeArrayIndex"
+                ] = include_array_index.replace("$", "")
+        self.pipelines.append(unwind_stage)
         return self
 
     def aggregate(self):
