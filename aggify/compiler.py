@@ -138,7 +138,7 @@ class F:
     def to_dict(self):
         return self.field
 
-    def __add__(self, other):  # TODO: add type for 'other'
+    def __add__(self, other):
         if isinstance(other, F):
             other = other.field
 
@@ -275,14 +275,14 @@ class Match:
     def compile(self, pipelines: list) -> Dict[str, Dict[str, list]]:
         match_query = {}
         for key, value in self.matches.items():
+            if isinstance(value, F):
+                if F.is_suitable_for_match(key) is False:
+                    raise InvalidOperator(key)
+
             if "__" not in key:
                 key = get_db_field(self.base_model, key)
                 match_query[key] = value
                 continue
-
-            if isinstance(value, F):
-                if F.is_suitable_for_match(key) is False:
-                    raise InvalidOperator(key)
 
             field, operator, *_ = key.split("__")
             if (
