@@ -1,4 +1,8 @@
-from aggify import Q
+import pytest
+
+from aggify import Q, F, Aggify
+from aggify.exceptions import InvalidOperator
+from tests.test_aggify import BaseModel
 
 
 class TestQ:
@@ -66,3 +70,7 @@ class TestQ:
                 "$or": [{"$not": [dict(q1)["$match"]]}, {"$not": [dict(q2)["$match"]]}]
             }
         }
+
+    def test_unsuitable_key_for_f(self):
+        with pytest.raises(InvalidOperator):
+            Q(Aggify(BaseModel).filter(age__gt=20).pipelines, age_gt=F("income") * 2)
