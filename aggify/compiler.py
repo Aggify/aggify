@@ -8,15 +8,16 @@ from aggify.utilty import get_db_field
 
 
 class Operators:
+    # noinspection SpellCheckingInspection
     QUERY_OPERATORS = {
         "exact": "$eq",
         "iexact": "$regex",
         "contains": "$regex",
-        "icontains": "$regex",  # noqa
+        "icontains": "$regex",
         "startswith": "$regex",
-        "istartswith": "$regex",  # noqa
+        "istartswith": "$regex",
         "endswith": "$regex",
-        "iendswith": "$regex",  # noqa
+        "iendswith": "$regex",
         "in": "$in",
         "nin": "$nin",
         "ne": "$ne",
@@ -35,6 +36,7 @@ class Operators:
         **COMPARISON_OPERATORS,
     }
 
+    # noinspection SpellCheckingInspection
     REGEX_PATTERNS = {
         "iexact": "^{value}$",
         "contains": "{value}",
@@ -45,6 +47,7 @@ class Operators:
         "iendswith": "{value}$",
     }
 
+    # noinspection SpellCheckingInspection
     REGEX_OPTIONS = {
         "iexact": "i",
         "icontains": "i",

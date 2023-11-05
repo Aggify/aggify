@@ -28,7 +28,7 @@ class AnnotationError(InvalidPipelineStageError):
 
 class OutStageError(InvalidPipelineStageError):
     def __init__(self, stage):
-        self.message = f"You cannot add a {self!r} pipeline after $out stage!"
+        self.message = f"You cannot add a {self!r} pipeline after $out stage! stage : {stage}"
         super().__init__(self.message)
 
 
@@ -45,7 +45,9 @@ class AggifyValueError(AggifyBaseException):
 
 class InvalidOperator(AggifyBaseException):
     def __init__(self, operator: str):
-        self.message = f"Operator {operator} does not exists, please refer to documentation to see all supported operators."
+        self.message = (
+            f"Operator {operator} does not exists, please refer to documentation to see all supported operators."
+        )
         super().__init__(self.message)
 
 

@@ -128,12 +128,12 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def order_by(self, *fields: Union[str, List[str]]) -> "Aggify":
+    def order_by(self, *order_fields: Union[str, List[str]]) -> "Aggify":
         sort_dict = {
             get_db_field(self.base_model, field.replace("-", "")): -1
             if field.startswith("-")
-            else 1  # noqa
-            for field in fields
+            else 1
+            for field in order_fields
         }
         self.pipelines.append({"$sort": sort_dict})
         return self
@@ -394,7 +394,7 @@ class Aggify:
             "sum": (fields.FloatField(), "$sum"),
             "avg": (fields.FloatField(), "$avg"),
             "stdDevPop": (fields.FloatField(), "$stdDevPop"),
-            "stdDevSamp": (fields.FloatField(), "$stdDevSamp"),
+            "stdDevSamp": (fields.FloatField(), "$stdDevSamp"),  # noqa
             "push": (fields.ListField(), "$push"),
             "addToSet": (fields.ListField(), "$addToSet"),
             "count": (fields.IntField(), "$count"),
@@ -559,9 +559,10 @@ class Aggify:
             from_collection (Document): The document representing the collection to perform the lookup on.
             as_name (str): The name of the new field to create.
             query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
-            let (Union[List[str], None], optional): The local field(s) to join on. If provided, localField and foreignField are not used.
-            local_field (Union[str, None], optional): The local field to join on when let is not provided.
-            foreign_field (Union[str, None], optional): The foreign field to join on when let is not provided.
+            let (Union[List[str], None], optional): The local field(s) to join on. If provided,
+            localField and foreignField are not used.
+            local_field (Union[str, None], optional): The local field to join on when let not provided.
+            foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
 
         Returns:
             Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
@@ -757,15 +758,15 @@ class Aggify:
         # List of valid redaction values
         redact_values = ["DESCEND", "PRUNE", "KEEP"]
 
-        def clean_then_else(then_value, else_value):
+        def clean_then_else(_then_value, _else_value):
             """
             Helper function to sanitize then_value and else_value.
 
             Strips the dollar sign and converts values to uppercase.
             """
             return (
-                then_value.replace("$", "").upper(),
-                else_value.replace("$", "").upper(),
+                _then_value.replace("$", "").upper(),
+                _else_value.replace("$", "").upper(),
             )
 
         # Clean the provided then_value and else_value

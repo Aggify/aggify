@@ -26,7 +26,7 @@ class BaseModel(Document):
 class TestAggify:
     def test__getitem__zero(self):
         aggify = Aggify(BaseModel)
-        aggify[0]
+        assert aggify[0]
 
     def test__getitem__slice(self):
         aggify = Aggify(BaseModel)
@@ -164,6 +164,7 @@ class TestAggify:
 
     def test_filter_value_error(self):
         with pytest.raises(AggifyValueError):
+            # noinspection PyTypeChecker
             Aggify(BaseModel).filter(arg="Hi")
 
     def test_group(self):
@@ -174,20 +175,24 @@ class TestAggify:
 
     def test_annotate_empty_pipeline_value_error(self):
         with pytest.raises(AnnotationError) as err:
+            # noinspection PyTypeChecker
             Aggify(BaseModel).annotate("size", "sum", None)
 
         assert "your pipeline is empty" in err.__str__().lower()
 
     def test_annotate_not_group_value_error(self):
         with pytest.raises(AnnotationError) as err:
+            # noinspection PyTypeChecker
             Aggify(BaseModel)[1].annotate("size", "sum", None)
 
         assert "not to $limit" in err.__str__().lower()
 
     def test_annotate_invalid_accumulator(self):
         with pytest.raises(AnnotationError):
+            # noinspection PyTypeChecker
             Aggify(BaseModel).group("name").annotate("size", "mahdi", None)
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -220,6 +225,7 @@ class TestAggify:
         assert len(thing.pipelines) == 1
         assert thing.pipelines[-1]["$group"]["price"] == {f"${accumulator}": "$price"}
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -254,6 +260,7 @@ class TestAggify:
             f"${accumulator}": {"$multiply": ["$price", 10]}
         }
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -288,6 +295,7 @@ class TestAggify:
             f"${accumulator}": "$name"
         }
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -322,6 +330,7 @@ class TestAggify:
             f"${accumulator}": "some_value"
         }
 
+    # noinspection SpellCheckingInspection
     @pytest.mark.parametrize(
         "accumulator",
         (
@@ -434,16 +443,19 @@ class TestAggify:
         thing = list(aggify.filter(name__contains="Aggify"))
         assert thing[-1]["$match"]["name"] == {"$regex": "Aggify"}
 
+    # noinspection SpellCheckingInspection
     def test_regex_icontains(self):
         aggify = Aggify(BaseModel)
         thing = list(aggify.filter(name__icontains="Aggify"))
         assert thing[-1]["$match"]["name"] == {"$regex": "Aggify", "$options": "i"}
 
+    # noinspection SpellCheckingInspection
     def test_regex_startwith(self):
         aggify = Aggify(BaseModel)
         thing = list(aggify.filter(name__startswith="Aggify"))
         assert thing[-1]["$match"]["name"] == {"$regex": "^Aggify"}
 
+    # noinspection SpellCheckingInspection
     def test_regex_istarstwith(self):
         aggify = Aggify(BaseModel)
         thing = list(aggify.filter(name__istartswith="Aggify"))
@@ -454,6 +466,7 @@ class TestAggify:
         thing = list(aggify.filter(name__endswith="Aggify"))
         assert thing[-1]["$match"]["name"] == {"$regex": "Aggify$"}
 
+    # noinspection SpellCheckingInspection
     def test_regex_iendswith(self):
         aggify = Aggify(BaseModel)
         thing = list(aggify.filter(name__iendswith="Aggify"))
