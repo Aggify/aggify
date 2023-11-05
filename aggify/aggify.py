@@ -238,11 +238,8 @@ class Aggify:
         """
         Builds the pipelines list based on the query parameters.
         """
-        skip_list = []
 
         for key, value in query.items():
-            if key in skip_list:
-                continue
 
             # Split the key to access the field information.
             split_query = key.split("__")
@@ -276,7 +273,6 @@ class Aggify:
                 matches = []
                 for k, v in query.items():
                     if k.split("__")[0] == split_query[0]:
-                        skip_list.append(k)
                         _key = k.replace("__", ".", 1)
                         match = self.__match({_key: v}).get("$match")
                         if match != {}:
