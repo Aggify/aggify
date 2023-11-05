@@ -486,11 +486,6 @@ class TestAggify:
         with pytest.raises(ValueError):
             aggify.filter(name__contains=F("age"))
 
-    def test_aggregate_failed_connection(self):
-        aggify = Aggify(BaseModel)
-        with pytest.raises(ValueError):
-            aggify.filter(name__contains=F("age")).aggregate()
-
     def test_annotate_str_field_as_value_but_not_base_model_field(self):
         thing = list(Aggify(BaseModel).group("name").annotate("age", "sum", "test"))
         assert thing[0]["$group"] == {"_id": "$name", "age": {"$sum": "test"}}
