@@ -23,7 +23,7 @@ from aggify.utilty import (
     get_db_field,
 )
 
-T = TypeVar('T', bound=Callable[..., "Aggify"])
+T = TypeVar("T", bound=Callable[..., "Aggify"])
 
 
 def last_out_stage_check(method: T) -> T:
@@ -127,7 +127,9 @@ class Aggify:
     @last_out_stage_check
     def order_by(self, *fields: Union[str, List[str]]) -> "Aggify":
         sort_dict = {
-            field.replace("-", ""): -1 if field.startswith("-") else 1
+            get_db_field(self.base_model, field.replace("-", "")): -1
+            if field.startswith("-")
+            else 1  # noqa
             for field in fields
         }
         self.pipelines.append({"$sort": sort_dict})
@@ -157,10 +159,12 @@ class Aggify:
                 add_fields_stage["$addFields"][field] = {"$literal": expression}
             elif isinstance(expression, F):
                 add_fields_stage["$addFields"][field] = expression.to_dict()
+            elif isinstance(expression, list):
+                add_fields_stage["$addFields"][field] = expression
             elif isinstance(expression, Cond):
                 add_fields_stage["$addFields"][field] = dict(expression)
             else:
-                raise AggifyValueError([str, F], type(expression))
+                raise AggifyValueError([str, F, list], type(expression))
             # TODO: Should be checked if new field is embedded, create embedded field.
             self.base_model._fields[field.replace("$", "")] = fields.IntField()  # noqa
 
