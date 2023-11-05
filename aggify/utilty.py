@@ -33,7 +33,7 @@ def to_mongo_positive_index(index: Union[int, slice]) -> slice:
     return index
 
 
-def check_fields_exist(model: Document, fields_to_check: List[str]) -> None:
+def check_fields_exist(model: Type[Document], fields_to_check: List[str]) -> None:
     """
     Check if the specified fields exist in a model's fields.
 
