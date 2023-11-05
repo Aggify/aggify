@@ -23,10 +23,13 @@ from aggify.utilty import (
     get_db_field,
 )
 
-T = TypeVar("T", bound=Callable[..., "Aggify"])
+
+AggifyType = TypeVar('AggifyType', bound=Callable[..., "Aggify"])
+CollectionType = TypeVar('CollectionType', bound=Callable[..., "Document"])
 
 
-def last_out_stage_check(method: T) -> T:
+
+def last_out_stage_check(method: AggifyType) -> AggifyType:
     """Check if the last stage is $out or not
 
     This decorator check if the last stage is $out or not
@@ -540,7 +543,7 @@ class Aggify:
     @last_out_stage_check
     def lookup(
         self,
-        from_collection: Document,
+        from_collection: CollectionType,
         as_name: str,
         query: Union[List[Q], Union[Q, None]] = None,
         let: Union[List[str], None] = None,
