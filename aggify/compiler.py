@@ -248,7 +248,12 @@ class Match:
 
     @staticmethod
     def validate_operator(key: str):
-        operator = key.rsplit("__", 1)[1]
+        _op = key.rsplit("__", 1)
+        try:
+            operator = _op[1]
+        except IndexError:
+            raise InvalidOperator(_op) from None
+
         if operator not in Operators.COMPARISON_OPERATORS:
             raise InvalidOperator(operator)
 
