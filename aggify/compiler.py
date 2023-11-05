@@ -82,11 +82,6 @@ class Operators:
                 }
             else:
                 self.match_query[field] = {Operators.ALL_OPERATORS[operator]: value}
-        else:
-            # Default behavior
-            self.match_query[field] = {
-                Operators.ALL_OPERATORS.get(operator, operator): value
-            }
 
         return self.match_query
 
@@ -107,7 +102,7 @@ class Q:
         yield "$match", self.conditions
 
     def __or__(self, other):
-        if self.conditions.get("$or", None):
+        if self.conditions.get("$or"):
             self.conditions["$or"].append(dict(other)["$match"])
             combined_conditions = self.conditions
 
@@ -116,7 +111,7 @@ class Q:
         return Q(**combined_conditions)
 
     def __and__(self, other):
-        if self.conditions.get("$and", None):
+        if self.conditions.get("$and"):
             self.conditions["$and"].append(dict(other)["$match"])
             combined_conditions = self.conditions
         else:
@@ -138,7 +133,7 @@ class F:
     def to_dict(self):
         return self.field
 
-    def __add__(self, other):  # TODO: add type for 'other'
+    def __add__(self, other):
         if isinstance(other, F):
             other = other.field
 
@@ -248,7 +243,12 @@ class Match:
 
     @staticmethod
     def validate_operator(key: str):
-        operator = key.rsplit("__", 1)[1]
+        _op = key.rsplit("__", 1)
+        try:
+            operator = _op[1]
+        except IndexError:
+            raise InvalidOperator(_op) from None
+
         if operator not in Operators.COMPARISON_OPERATORS:
             raise InvalidOperator(operator)
 
@@ -275,14 +275,14 @@ class Match:
     def compile(self, pipelines: list) -> Dict[str, Dict[str, list]]:
         match_query = {}
         for key, value in self.matches.items():
+            if isinstance(value, F):
+                if F.is_suitable_for_match(key) is False:
+                    raise InvalidOperator(key)
+
             if "__" not in key:
                 key = get_db_field(self.base_model, key)
                 match_query[key] = value
                 continue
-
-            if isinstance(value, F):
-                if F.is_suitable_for_match(key) is False:
-                    raise InvalidOperator(key)
 
             field, operator, *_ = key.split("__")
             if (

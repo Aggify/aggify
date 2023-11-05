@@ -1,5 +1,5 @@
 import pytest
-from mongoengine import Document, IntField, StringField
+from mongoengine import Document, IntField, StringField, UUIDField
 
 from aggify import Aggify, Cond, F, Q
 from aggify.exceptions import (
@@ -50,6 +50,12 @@ class TestAggify:
         aggify.filter(age__gte=30).project(name=1, age=1)
         assert len(aggify.pipelines) == 2
         assert aggify.pipelines[1]["$project"] == {"name": 1, "age": 1}
+
+    def test_filtering_and_projection_with_deleting_id(self):
+        aggify = Aggify(BaseModel)
+        aggify.filter(age__gte=30).project(name=1, age=1, id=0)
+        assert len(aggify.pipelines) == 2
+        assert aggify.pipelines[1]["$project"] == {"_id": 0, "name": 1, "age": 1}
 
     def test_filtering_and_ordering(self):
         aggify = Aggify(BaseModel)
@@ -136,35 +142,25 @@ class TestAggify:
             }
             aggify.add_fields(**fields)
 
-    def test_add_fields_string_literal(self):
+    @pytest.mark.parametrize(
+        ("fields", "expected"),
+        (
+            ({"scores__age": "Mahdi"}, {"scores.age": {"$literal": "Mahdi"}}),
+            (
+                {"new_field": F("existing_field") + 10},
+                {"new_field": {"$add": ["$existing_field", 10]}},
+            ),
+            ({"array": [1, 2, 3, 4]}, {"array": [1, 2, 3, 4]}),
+            (
+                {"cond": Cond(30, "==", 30, "Equal", "Not Equal")},
+                {"cond": dict(Cond(30, "==", 30, "Equal", "Not Equal"))},
+            ),
+        ),
+    )
+    def test_add_fields(self, fields, expected):
         aggify = Aggify(BaseModel)
-        fields = {"new_field_1": "some_string", "new_field_2": "another_string"}
         add_fields_stage = aggify.add_fields(**fields)
-
-        expected_stage = {
-            "$addFields": {
-                "new_field_1": {"$literal": "some_string"},
-                "new_field_2": {"$literal": "another_string"},
-            }
-        }
-
-        assert add_fields_stage.pipelines[0] == expected_stage
-
-    def test_add_fields_with_f_expression(self):
-        aggify = Aggify(BaseModel)
-        fields = {
-            "new_field_1": F("existing_field") + 10,
-            "new_field_2": F("field_a") * F("field_b"),
-        }
-        add_fields_stage = aggify.add_fields(**fields)
-
-        expected_stage = {
-            "$addFields": {
-                "new_field_1": {"$add": ["$existing_field", 10]},
-                "new_field_2": {"$multiply": ["$field_a", "$field_b"]},
-            }
-        }
-        assert add_fields_stage.pipelines[0] == expected_stage
+        assert add_fields_stage.pipelines[0]["$addFields"] == expected
 
     def test_filter_value_error(self):
         with pytest.raises(AggifyValueError):
