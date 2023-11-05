@@ -134,18 +134,18 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def add_fields(self, **_fields) -> "Aggify":  # noqa
+    def add_fields(self, **fields) -> "Aggify":  # noqa
         """Generates a MongoDB addFields pipeline stage.
 
         Args:
-            _fields: A dictionary of field expressions and values.
+            fields: A dictionary of field expressions and values.
 
         Returns:
             A MongoDB add_fields pipeline stage.
         """
         add_fields_stage = {"$addFields": {}}
 
-        for field, expression in _fields.items():
+        for field, expression in fields.items():
             field = field.replace("__", ".")
             if isinstance(expression, str):
                 add_fields_stage["$addFields"][field] = {"$literal": expression}
