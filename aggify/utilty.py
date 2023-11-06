@@ -1,8 +1,11 @@
-from typing import Any, Union, List, Dict
+import functools
+from typing import Any, Union, List, Dict, TypeVar, Callable
 
 from mongoengine import Document
 from aggify.types import CollectionType
-from aggify.exceptions import MongoIndexError, InvalidField, AlreadyExistsField
+from aggify.exceptions import MongoIndexError, InvalidField, AlreadyExistsField, OutStageError
+
+AggifyType = TypeVar("AggifyType", bound=Callable[..., "Aggify"])
 
 
 def to_mongo_positive_index(index: Union[int, slice]) -> slice:
@@ -138,3 +141,23 @@ def get_db_field(model: CollectionType, field: str, add_dollar_sign=False) -> st
         return f"${db_field}" if add_dollar_sign else db_field
     except AttributeError:
         return field
+
+
+def last_out_stage_check(method: AggifyType) -> AggifyType:
+    """Check if the last stage is $out or not
+
+    This decorator check if the last stage is $out or not
+    MongoDB does not allow adding aggregation pipeline stage after $out stage
+    """
+
+    @functools.wraps(method)
+    def decorator(*args, **kwargs):
+        try:
+            if bool(args[0].pipelines[-1].get("$out")):
+                raise OutStageError(method.__name__)
+        except IndexError:
+            return method(*args, **kwargs)
+        else:
+            return method(*args, **kwargs)
+
+    return decorator
