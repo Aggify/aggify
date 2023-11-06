@@ -46,7 +46,6 @@ Here's a code snippet that demonstrates how to use Aggify to construct a MongoDB
 ```python
 from mongoengine import Document, fields
 
-
 class AccountDocument(Document):
     username = fields.StringField()
     display_name = fields.StringField()
@@ -56,105 +55,164 @@ class AccountDocument(Document):
     deleted_at = fields.LongField()
     banned_at = fields.LongField()
 
-class PostDocument(Document):
-    owner = fields.ReferenceField('AccountDocument', db_field='owner_id')
-    caption = fields.StringField()
-    location = fields.StringField()
-    comment_disabled = fields.BooleanField()
-    stat_disabled = fields.BooleanField()
-    hashtags = fields.ListField()
-    archived_at = fields.LongField()
-    deleted_at = fields.LongField()
+class FollowAccountEdge(Document):
+    start = fields.ReferenceField("AccountDocument")
+    end = fields.ReferenceField("AccountDocument")
+    accepted = fields.BooleanField()
+    meta = {
+        "collection": "edge.follow.account",
+    }
+
+class BlockEdge(Document):
+    start = fields.ObjectIdField()
+    end = fields.ObjectIdField()
+    meta = {
+        "collection": "edge.block",
+    }
 ```
 
 Aggify query:
 
 ```python
-from aggify import Aggify, Q, F
+from models import *
+from aggify import Aggify, F, Q
+from bson import ObjectId
 
-query = Aggify(PostDocument)
+aggify = Aggify(AccountDocument)
 
-query.filter(deleted_at=None, caption__contains='Aggify').order_by('-_id').lookup(
-        AccountDocument, query=[
-            Q(_id__exact='owner') & Q(deleted_at=None),
-            Q(is_verified__exact=True)
-        ], let=['owner'], as_name='owner'
-    ).filter(owner__ne=[]).add_fields({
-        "aggify": "Aggify is lovely",
-    }
-    ).project(caption=0).out("post").pipelines
+pipelines = list(
+    (
+        aggify.filter(
+            phone__in=[],
+            id__ne=ObjectId(),
+            disabled_at=None,
+            banned_at=None,
+            deleted_at=None,
+            network_id=ObjectId(),
+        )
+        .lookup(
+            FollowAccountEdge,
+            let=["id"],
+            query=[Q(start__exact=ObjectId()) & Q(end__exact="id")],
+            as_name="followed",
+        )
+        .lookup(
+            BlockEdge,
+            let=["id"],
+            as_name="blocked",
+            query=[
+                (Q(start__exact=ObjectId()) & Q(end__exact="id"))
+                | (Q(end__exact=ObjectId()) & Q(start__exact="id"))
+            ],
+        )
+        .filter(followed=[], blocked=[])
+        .group("username")
+        .annotate(annotate_name="phone", accumulator="first", f=F("phone") + 10)
+        .redact(
+            value1="phone",
+            condition="==",
+            value2="132",
+            then_value="keep",
+            else_value="prune",
+        )
+        .project(username=0)[5:10]
+        .out(coll="account")
+    )
+)
 ```
 
 Mongoengine equivalent query:
 
 ```python
 [
-        {
-            '$match': {
-                'caption': {
-                    '$options': 'i',
-                    '$regex': '.*Aggify.*'
-                },
-                'deleted_at': None
-            }
-        },
-        {
-            '$sort': {
-                '_id': -1
-            }
-        },
-        {
-            '$lookup': {
-                'as': 'owner',
-                'from': 'account',
-                'let': {
-                    'owner': '$owner_id'
-                },
-                'pipeline': [
-                    {
-                        '$match': {
-                            '$expr': {
-                                '$and': [
-                                    {
-                                        '$eq': ['$_id', '$$owner']
-                                    },
-                                    {
-                                        'deleted_at': None
-                                    }
-                                ]
-                            }
-                        }
-                    },
-                    {
-                        '$match': {
-                            '$expr': {
-                                '$eq': ['$is_verified', True]
-                            }
+    {
+        "$match": {
+            "phone": {"$in": []},
+            "_id": {"$ne": ObjectId("65486eae04cce43c5469e0f1")},
+            "disabled_at": None,
+            "banned_at": None,
+            "deleted_at": None,
+            "network_id": ObjectId("65486eae04cce43c5469e0f2"),
+        }
+    },
+    {
+        "$lookup": {
+            "from": "edge.follow.account",
+            "let": {"id": "$_id"},
+            "pipeline": [
+                {
+                    "$match": {
+                        "$expr": {
+                            "$and": [
+                                {
+                                    "$eq": [
+                                        "$start",
+                                        ObjectId("65486eae04cce43c5469e0f3"),
+                                    ]
+                                },
+                                {"$eq": ["$end", "$$id"]},
+                            ]
                         }
                     }
-                ]
-            }
-        },
-        {
-            '$match': {
-                'owner': {'$ne': []}
-            }
-        },
-        {
-            '$addFields': {
-                'aggify': {
-                    '$literal': 'Aggify is lovely'
                 }
-            }
-        },
-        {
-            '$project': {
-                'caption': 0
-                }
-        },
-        {
-            '$out': 'post'
+            ],
+            "as": "followed",
         }
+    },
+    {
+        "$lookup": {
+            "from": "edge.block",
+            "let": {"id": "$_id"},
+            "pipeline": [
+                {
+                    "$match": {
+                        "$expr": {
+                            "$or": [
+                                {
+                                    "$and": [
+                                        {
+                                            "$eq": [
+                                                "$start",
+                                                ObjectId("65486eae04cce43c5469e0f4"),
+                                            ]
+                                        },
+                                        {"$eq": ["$end", "$$id"]},
+                                    ]
+                                },
+                                {
+                                    "$and": [
+                                        {
+                                            "$eq": [
+                                                "$end",
+                                                ObjectId("65486eae04cce43c5469e0f5"),
+                                            ]
+                                        },
+                                        {"$eq": ["$start", "$$id"]},
+                                    ]
+                                },
+                            ]
+                        }
+                    }
+                }
+            ],
+            "as": "blocked",
+        }
+    },
+    {"$match": {"followed": [], "blocked": []}},
+    {"$group": {"_id": "$username", "phone": {"$first": {"$add": ["$phone", 10]}}}},
+    {
+        "$redact": {
+            "$cond": {
+                "if": {"$eq": ["phone", "132"]},
+                "then": "$$KEEP",
+                "else": "$$PRUNE",
+            }
+        }
+    },
+    {"$project": {"username": 0}},
+    {"$skip": 5},
+    {"$limit": 5},
+    {"$out": "account"},
 ]
 ```
 
