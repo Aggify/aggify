@@ -116,12 +116,10 @@ class Aggify:
     @last_out_stage_check
     def group(self, expression: Union[str, None] = "id") -> "Aggify":
         if expression:
-            check_fields_exist(self.base_model, [expression])
-        expression = (
-            get_db_field(self.base_model, expression, add_dollar_sign=True)
-            if expression
-            else None
-        )
+            try:
+                expression = "$" + self.get_field_name_recursively(expression)
+            except InvalidField:
+                pass
         self.pipelines.append({"$group": {"_id": expression}})
         return self
 
