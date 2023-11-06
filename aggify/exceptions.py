@@ -74,3 +74,9 @@ class InvalidArgument(AggifyBaseException):
         self.message = f"Input is not correctly passed, expected {[expected for expected in expected_list]}"
         self.expecteds = expected_list
         super().__init__(self.message)
+
+
+class InvalidProjection(AggifyBaseException):
+    def __init__(self):
+        self.message = "You can't use inclusion and exclusion together."
+        super().__init__(self.message)
