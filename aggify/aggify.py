@@ -1,4 +1,5 @@
-from typing import Any, Dict, Type, Union, List
+import functools
+from typing import Any, Dict, Type, Union, List, TypeVar, Callable
 
 from mongoengine import Document, EmbeddedDocument, fields as mongoengine_fields
 from mongoengine.base import TopLevelDocumentMetaclass
@@ -9,6 +10,7 @@ from aggify.exceptions import (
     AnnotationError,
     InvalidField,
     InvalidEmbeddedField,
+    OutStageError,
     InvalidArgument,
 )
 from aggify.types import QueryParams, CollectionType
@@ -19,8 +21,29 @@ from aggify.utilty import (
     convert_match_query,
     check_field_exists,
     get_db_field,
-    last_out_stage_check,
 )
+
+AggifyType = TypeVar("AggifyType", bound=Callable[..., "Aggify"])
+
+
+def last_out_stage_check(method: AggifyType) -> AggifyType:
+    """Check if the last stage is $out or not
+
+    This decorator check if the last stage is $out or not
+    MongoDB does not allow adding aggregation pipeline stage after $out stage
+    """
+
+    @functools.wraps(method)
+    def decorator(*args, **kwargs):
+        try:
+            if bool(args[0].pipelines[-1].get("$out")):
+                raise OutStageError(method.__name__)
+        except IndexError:
+            return method(*args, **kwargs)
+        else:
+            return method(*args, **kwargs)
+
+    return decorator
 
 
 class Aggify:
@@ -71,7 +94,7 @@ class Aggify:
             if value == 1:
                 to_keep_values.add(key)
             elif key not in self.base_model._fields and isinstance(  # noqa
-                    kwargs[key], (str, dict)
+                kwargs[key], (str, dict)
             ):
                 to_keep_values.add(key)
                 self.base_model._fields[key] = mongoengine_fields.IntField()  # noqa
@@ -152,7 +175,7 @@ class Aggify:
 
     @last_out_stage_check
     def filter(
-            self, arg: Union[Q, None] = None, **kwargs: Union[QueryParams, F, list]
+        self, arg: Union[Q, None] = None, **kwargs: Union[QueryParams, F, list]
     ) -> "Aggify":
         """
         # TODO: missing docs
@@ -223,16 +246,16 @@ class Aggify:
             join_field = self.get_model_field(self.base_model, split_query[0])  # type: ignore
             # Check conditions for creating a 'match' pipeline stage.
             if (
-                    isinstance(
-                        join_field, TopLevelDocumentMetaclass
-                    )  # check whether field is added by lookup stage or not
-                    or "document_type_obj"
-                    not in join_field.__dict__  # Check whether this field is a join field or not.
-                    or issubclass(
+                isinstance(
+                    join_field, TopLevelDocumentMetaclass
+                )  # check whether field is added by lookup stage or not
+                or "document_type_obj"
+                not in join_field.__dict__  # Check whether this field is a join field or not.
+                or issubclass(
                     join_field.document_type, EmbeddedDocument  # noqa
                 )  # Check whether this field is embedded field or not
-                    or len(split_query) == 1
-                    or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
+                or len(split_query) == 1
+                or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
             ):
                 # Create a 'match' pipeline stage.
                 match = self.__match({key: value})
@@ -278,10 +301,10 @@ class Aggify:
 
     @last_out_stage_check
     def unwind(
-            self,
-            path: str,
-            include_array_index: Union[str, None] = None,
-            preserve: bool = False,
+        self,
+        path: str,
+        include_array_index: Union[str, None] = None,
+        preserve: bool = False,
     ) -> "Aggify":
         """Generates a MongoDB unwind pipeline stage.
 
@@ -329,7 +352,7 @@ class Aggify:
         return self
 
     def annotate(
-            self, annotate_name: str, accumulator: str, f: Union[Union[str, Dict], F, int]
+        self, annotate_name: str, accumulator: str, f: Union[Union[str, Dict], F, int]
     ) -> "Aggify":
         """
         Annotate a MongoDB aggregation pipeline with a new field.
@@ -442,7 +465,7 @@ class Aggify:
 
     @staticmethod
     def __lookup(
-            from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
+        from_collection: str, local_field: str, as_name: str, foreign_field: str = "_id"
     ) -> Dict[str, Dict[str, str]]:
         """
         Generates a MongoDB lookup pipeline stage.
@@ -523,13 +546,13 @@ class Aggify:
 
     @last_out_stage_check
     def lookup(
-            self,
-            from_collection: CollectionType,
-            as_name: str,
-            query: Union[List[Q], Union[Q, None], List["Aggify"]] = None,
-            let: Union[List[str], None] = None,
-            local_field: Union[str, None] = None,
-            foreign_field: Union[str, None] = None,
+        self,
+        from_collection: CollectionType,
+        as_name: str,
+        query: Union[List[Q], Union[Q, None], List["Aggify"]] = None,
+        let: Union[List[str], None] = None,
+        local_field: Union[str, None] = None,
+        foreign_field: Union[str, None] = None,
     ) -> "Aggify":
         """
         Generates a MongoDB lookup pipeline stage.
@@ -649,7 +672,7 @@ class Aggify:
         model_field = self.get_model_field(self.base_model, embedded_field)  # noqa
 
         if not hasattr(model_field, "document_type") or not issubclass(
-                model_field.document_type, EmbeddedDocument
+            model_field.document_type, EmbeddedDocument
         ):
             raise InvalidEmbeddedField(field=embedded_field)
 
@@ -657,7 +680,7 @@ class Aggify:
 
     @last_out_stage_check
     def replace_root(
-            self, *, embedded_field: str, merge: Union[Dict, None] = None
+        self, *, embedded_field: str, merge: Union[Dict, None] = None
     ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
@@ -685,7 +708,7 @@ class Aggify:
 
     @last_out_stage_check
     def replace_with(
-            self, *, embedded_field: str, merge: Union[Dict, None] = None
+        self, *, embedded_field: str, merge: Union[Dict, None] = None
     ) -> "Aggify":
         """
         Replace the root document in the aggregation pipeline with a specified embedded field or a merged result.
