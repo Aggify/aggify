@@ -252,8 +252,8 @@ class Aggify:
                 or "document_type_obj"
                 not in join_field.__dict__  # Check whether this field is a join field or not.
                 or issubclass(
-                join_field.document_type, EmbeddedDocument  # noqa
-            )  # Check whether this field is embedded field or not
+                    join_field.document_type, EmbeddedDocument  # noqa
+                )  # Check whether this field is embedded field or not
                 or len(split_query) == 1
                 or (len(split_query) == 2 and split_query[1] in Operators.ALL_OPERATORS)
             ):
@@ -555,23 +555,23 @@ class Aggify:
         foreign_field: Union[str, None] = None,
     ) -> "Aggify":
         """
-            Generates a MongoDB lookup pipeline stage.
+        Generates a MongoDB lookup pipeline stage.
 
-            Args:
-                from_collection (Document): The document representing the collection to perform the lookup on.
-                as_name (str): The name of the new field to create.
-                query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
-                let (Union[List[str], None], optional): The local field(s) to join on. If provided,
-                localField and foreignField are not used.
-                local_field (Union[str, None], optional): The local field to join on when `let` is not provided.
-                foreign_field (Union[str, None], optional): The foreign field to join on when `let` is not provided.
-                let (Union[List[str], None], optional): The local field(s) to join on. If provided,
-                localField and foreignField are not used.
-                local_field (Union[str, None], optional): The local field to join on when let not provided.
-                foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
+        Args:
+            from_collection (Document): The document representing the collection to perform the lookup on.
+            as_name (str): The name of the new field to create.
+            query (list[Q] | Union[Q, None], optional): List of desired queries with Q function or a single query.
+            let (Union[List[str], None], optional): The local field(s) to join on. If provided,
+            localField and foreignField are not used.
+            local_field (Union[str, None], optional): The local field to join on when `let` is not provided.
+            foreign_field (Union[str, None], optional): The foreign field to join on when `let` is not provided.
+            let (Union[List[str], None], optional): The local field(s) to join on. If provided,
+            localField and foreignField are not used.
+            local_field (Union[str, None], optional): The local field to join on when let not provided.
+            foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
 
-            Returns:
-                Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
+        Returns:
+            Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
         """
 
         lookup_stages = []
