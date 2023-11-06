@@ -456,6 +456,16 @@ cases = [
         ),
         expected_query=[{"$group": {"_id": "$owner_id", "sss": {"$first": "sss"}}}],
     ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(PostDocument)
+            .group("stat__like_count")
+            .annotate("sss", "first", "sss")
+        ),
+        expected_query=[
+            {"$group": {"_id": "$stat.like_count", "sss": {"$first": "sss"}}}
+        ],
+    ),
 ]
 
 
