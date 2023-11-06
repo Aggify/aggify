@@ -613,3 +613,7 @@ class TestAggify:
         with pytest.raises(MongoIndexError):
             # noinspection PyUnusedLocal
             var = aggify.filter(name=1)[slice(-5, -1)]
+
+    def test_group_invalid_field(self):
+        thing = list(Aggify(BaseModel).group("invalid").annotate("name", "first", 2))
+        assert thing[0]["$group"] == {"_id": "invalid", "name": {"$first": 2}}
