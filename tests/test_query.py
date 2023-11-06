@@ -82,10 +82,10 @@ cases = [
     ParameterTestCase(
         compiled_query=Aggify(PostDocument)
         .filter(caption__contains="hello")
-        .project(caption=1, deleted_at=0),
+        .project(caption=1, deleted_at=1),
         expected_query=[
             {"$match": {"caption": {"$regex": "hello"}}},
-            {"$project": {"caption": 1, "deleted_at": 0}},
+            {"$project": {"caption": 1, "deleted_at": 1}},
         ],
     ),
     ParameterTestCase(
