@@ -466,6 +466,68 @@ cases = [
             {"$group": {"_id": "$stat.like_count", "sss": {"$first": "sss"}}}
         ],
     ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(PostDocument).lookup(
+                AccountDocument,
+                let=["caption"],
+                raw_let={
+                    "latest_story_id": {"$last": {"$slice": ["$owner.story", -1]}}
+                },
+                query=[
+                    Q(end__exact="caption") & Q(start__exact="$$latest_story_id._id")
+                ],
+                as_name="is_seen",
+            )
+        ),
+        expected_query=[
+            {
+                "$lookup": {
+                    "from": "account",
+                    "let": {
+                        "caption": "$caption",
+                        "latest_story_id": {"$last": {"$slice": ["$owner.story", -1]}},
+                    },
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$eq": ["$end", "$$caption"]},
+                                        {"$eq": ["$start", "$$latest_story_id._id"]},
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    "as": "is_seen",
+                }
+            }
+        ],
+    ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(PostDocument)
+            .lookup(
+                PostDocument,
+                local_field="end",
+                foreign_field="id",
+                as_name="saved_post",
+            )
+            .replace_root(embedded_field="saved_post")
+        ),
+        expected_query=[
+            {
+                "$lookup": {
+                    "as": "saved_post",
+                    "foreignField": "_id",
+                    "from": "post_document",
+                    "localField": "end",
+                }
+            },
+            {"$replaceRoot": {"$newRoot": "$saved_post"}},
+        ],
+    ),
 ]
 
 
