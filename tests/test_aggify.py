@@ -644,3 +644,21 @@ class TestAggify:
         thing = list(aggify.project(test="test", id=0))
         assert thing[0]["$project"] == {"test": "test", "_id": 0}
         assert list(aggify.base_model._fields.keys()) == ["test"]
+
+    def test_lookup_raw_let(self):
+        aggify = Aggify(BaseModel)
+        thing = list(
+            aggify.lookup(
+                BaseModel,
+                raw_let={"test": "$name"},
+                query=[Q(name__exact="$$test")],
+                as_name="test_name",
+            )
+        )
+        assert thing[0]["$lookup"] == {
+            "from": None,
+            "let": {"test": "$name"},
+            "pipeline": [{"$match": {"$expr": {"$eq": ["$name", "$$test"]}}}],
+            "as": "test_name",
+        }
+        assert "test_name" in list(aggify.base_model._fields.keys())
