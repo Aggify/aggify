@@ -84,13 +84,13 @@ class Aggify:
         Returns:
             Aggify: Returns an instance of the Aggify class for potential method chaining.
         """
-
-        if all([i in kwargs.values() for i in [0, 1]]):
+        filtered_kwargs = dict(kwargs)
+        filtered_kwargs.pop("id", None)
+        if all([i in filtered_kwargs.values() for i in [0, 1]]):
             raise InvalidProjection()
 
         # Extract fields to keep and check if _id should be deleted
         to_keep_values = {"id"}
-        delete_id = kwargs.get("id") is not None
         projection = {}
 
         # Add missing fields to the base model
@@ -109,13 +109,10 @@ class Aggify:
         # Remove fields from the base model, except the ones in to_keep_values and possibly _id
         if to_keep_values != {"id"}:
             keys_for_deletion = self.base_model._fields.keys() - to_keep_values  # noqa
-            if delete_id:
-                keys_for_deletion.add("id")
             for key in keys_for_deletion:
                 del self.base_model._fields[key]  # noqa
         # Append the projection stage to the pipelines
         self.pipelines.append({"$project": projection})
-
         # Return the instance for method chaining
         return self
 

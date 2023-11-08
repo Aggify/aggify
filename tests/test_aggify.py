@@ -51,12 +51,14 @@ class TestAggify:
         aggify.filter(age__gte=30).project(name=1, age=1)
         assert len(aggify.pipelines) == 2
         assert aggify.pipelines[1]["$project"] == {"name": 1, "age": 1}
+        assert list(aggify.base_model._fields.keys()) == ["name", "age", "id"]
 
     def test_filtering_and_projection_with_deleting_id(self):
         aggify = Aggify(BaseModel)
-        aggify.filter(age__gte=30).project(name=1, age=1, id=1)
+        aggify.filter(age__gte=30).project(name=1, age=1, id=0)
         assert len(aggify.pipelines) == 2
-        assert aggify.pipelines[1]["$project"] == {"_id": 1, "name": 1, "age": 1}
+        assert aggify.pipelines[1]["$project"] == {"_id": 0, "name": 1, "age": 1}
+        assert list(aggify.base_model._fields.keys()) == ["name", "age"]
 
     def test_filtering_and_ordering(self):
         aggify = Aggify(BaseModel)
@@ -636,3 +638,9 @@ class TestAggify:
         with pytest.raises(InvalidProjection):
             # noinspection PyUnusedLocal
             var = aggify.project(name=0, age=1)
+
+    def test_project_add_new_field(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.project(test="test", id=0))
+        assert thing[0]["$project"] == {"test": "test", "_id": 0}
+        assert list(aggify.base_model._fields.keys()) == ["test"]
