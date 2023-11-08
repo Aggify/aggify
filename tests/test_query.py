@@ -82,10 +82,10 @@ cases = [
     ParameterTestCase(
         compiled_query=Aggify(PostDocument)
         .filter(caption__contains="hello")
-        .project(caption=1, deleted_at=0),
+        .project(caption=1, deleted_at=1),
         expected_query=[
             {"$match": {"caption": {"$regex": "hello"}}},
-            {"$project": {"caption": 1, "deleted_at": 0}},
+            {"$project": {"caption": 1, "deleted_at": 1}},
         ],
     ),
     ParameterTestCase(
@@ -455,6 +455,16 @@ cases = [
             Aggify(PostDocument).group("owner").annotate("sss", "first", "sss")
         ),
         expected_query=[{"$group": {"_id": "$owner_id", "sss": {"$first": "sss"}}}],
+    ),
+    ParameterTestCase(
+        compiled_query=(
+            Aggify(PostDocument)
+            .group("stat__like_count")
+            .annotate("sss", "first", "sss")
+        ),
+        expected_query=[
+            {"$group": {"_id": "$stat.like_count", "sss": {"$first": "sss"}}}
+        ],
     ),
 ]
 

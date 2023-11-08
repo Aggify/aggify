@@ -12,6 +12,7 @@ from aggify.exceptions import (
     InvalidEmbeddedField,
     OutStageError,
     InvalidArgument,
+    InvalidProjection,
 )
 from aggify.types import QueryParams, CollectionType
 from aggify.utilty import (
@@ -83,10 +84,13 @@ class Aggify:
         Returns:
             Aggify: Returns an instance of the Aggify class for potential method chaining.
         """
+        filtered_kwargs = dict(kwargs)
+        filtered_kwargs.pop("id", None)
+        if all([i in filtered_kwargs.values() for i in [0, 1]]):
+            raise InvalidProjection()
 
         # Extract fields to keep and check if _id should be deleted
         to_keep_values = {"id"}
-        delete_id = kwargs.get("id") is not None
         projection = {}
 
         # Add missing fields to the base model
@@ -99,29 +103,26 @@ class Aggify:
                 to_keep_values.add(key)
                 self.base_model._fields[key] = mongoengine_fields.IntField()  # noqa
             projection[get_db_field(self.base_model, key)] = value  # noqa
+            if value == 0:
+                del self.base_model._fields[key]  # noqa
 
         # Remove fields from the base model, except the ones in to_keep_values and possibly _id
-        keys_for_deletion = self.base_model._fields.keys() - to_keep_values  # noqa
-        if delete_id:
-            keys_for_deletion.add("id")
-        for key in keys_for_deletion:
-            del self.base_model._fields[key]  # noqa
-
+        if to_keep_values != {"id"}:
+            keys_for_deletion = self.base_model._fields.keys() - to_keep_values  # noqa
+            for key in keys_for_deletion:
+                del self.base_model._fields[key]  # noqa
         # Append the projection stage to the pipelines
         self.pipelines.append({"$project": projection})
-
         # Return the instance for method chaining
         return self
 
     @last_out_stage_check
     def group(self, expression: Union[str, None] = "id") -> "Aggify":
         if expression:
-            check_fields_exist(self.base_model, [expression])
-        expression = (
-            get_db_field(self.base_model, expression, add_dollar_sign=True)
-            if expression
-            else None
-        )
+            try:
+                expression = "$" + self.get_field_name_recursively(expression)
+            except InvalidField:
+                pass
         self.pipelines.append({"$group": {"_id": expression}})
         return self
 
@@ -159,10 +160,14 @@ class Aggify:
                 add_fields_stage["$addFields"][field] = {"$literal": expression}
             elif isinstance(expression, F):
                 add_fields_stage["$addFields"][field] = expression.to_dict()
-            elif isinstance(expression, list):
+            elif isinstance(expression, (list, dict)):
                 add_fields_stage["$addFields"][field] = expression
             elif isinstance(expression, Cond):
                 add_fields_stage["$addFields"][field] = dict(expression)
+            elif isinstance(expression, Q):
+                add_fields_stage["$addFields"][field] = convert_match_query(
+                    dict(expression)
+                )["$match"]
             else:
                 raise AggifyValueError([str, F, list], type(expression))
             # TODO: Should be checked if new field is embedded, create embedded field.

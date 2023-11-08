@@ -12,6 +12,7 @@ from aggify.exceptions import (
     AlreadyExistsField,
     InvalidEmbeddedField,
     MongoIndexError,
+    InvalidProjection,
 )
 
 
@@ -50,12 +51,14 @@ class TestAggify:
         aggify.filter(age__gte=30).project(name=1, age=1)
         assert len(aggify.pipelines) == 2
         assert aggify.pipelines[1]["$project"] == {"name": 1, "age": 1}
+        assert list(aggify.base_model._fields.keys()) == ["name", "age", "id"]
 
     def test_filtering_and_projection_with_deleting_id(self):
         aggify = Aggify(BaseModel)
         aggify.filter(age__gte=30).project(name=1, age=1, id=0)
         assert len(aggify.pipelines) == 2
         assert aggify.pipelines[1]["$project"] == {"_id": 0, "name": 1, "age": 1}
+        assert list(aggify.base_model._fields.keys()) == ["name", "age"]
 
     def test_filtering_and_ordering(self):
         aggify = Aggify(BaseModel)
@@ -613,3 +616,31 @@ class TestAggify:
         with pytest.raises(MongoIndexError):
             # noinspection PyUnusedLocal
             var = aggify.filter(name=1)[slice(-5, -1)]
+
+    def test_group_invalid_field(self):
+        thing = list(Aggify(BaseModel).group("invalid").annotate("name", "first", 2))
+        assert thing[0]["$group"] == {"_id": "invalid", "name": {"$first": 2}}
+
+    def test_add_field_with_q(self):
+        thing = list(Aggify(BaseModel).add_fields(new_field=Q(name__exact="aggify")))
+        assert thing[0]["$addFields"] == {"new_field": {"$eq": ["$name", "aggify"]}}
+
+    def test_add_field_with_dict(self):
+        thing = list(
+            Aggify(BaseModel).add_fields(new_field={"$eq": ["$owner.visibility", 0]})
+        )
+        assert thing[0]["$addFields"] == {
+            "new_field": {"$eq": ["$owner.visibility", 0]}
+        }
+
+    def test_project_use_inclusion_and_exclusion_together(self):
+        aggify = Aggify(BaseModel)
+        with pytest.raises(InvalidProjection):
+            # noinspection PyUnusedLocal
+            var = aggify.project(name=0, age=1)
+
+    def test_project_add_new_field(self):
+        aggify = Aggify(BaseModel)
+        thing = list(aggify.project(test="test", id=0))
+        assert thing[0]["$project"] == {"test": "test", "_id": 0}
+        assert list(aggify.base_model._fields.keys()) == ["test"]
