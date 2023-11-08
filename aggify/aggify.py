@@ -752,6 +752,9 @@ class Aggify:
             new_root = {"$replaceWith": name}
         else:
             new_root = {"$replaceWith": {"$mergeObjects": [merge, name]}}
+            self.base_model._fields.update(  # noqa
+                {key: mongoengine_fields.IntField() for key, value in merge.items()}
+            )
         self.pipelines.append(new_root)
 
         return self
