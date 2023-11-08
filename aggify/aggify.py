@@ -140,6 +140,7 @@ class Aggify:
     @last_out_stage_check
     def raw(self, raw_query: dict) -> "Aggify":
         self.pipelines.append(raw_query)
+        self.pipelines = self.__combine_sequential_matches()
         return self
 
     @last_out_stage_check
@@ -558,6 +559,7 @@ class Aggify:
         let: Union[List[str], None] = None,
         local_field: Union[str, None] = None,
         foreign_field: Union[str, None] = None,
+        raw_let: Union[Dict, None] = None,
     ) -> "Aggify":
         """
         Generates a MongoDB lookup pipeline stage.
@@ -574,6 +576,7 @@ class Aggify:
             localField and foreignField are not used.
             local_field (Union[str, None], optional): The local field to join on when let not provided.
             foreign_field (Union[str, None], optional): The foreign field to join on when let not provided.
+            raw_let (Union[Dict, None]): raw let
 
         Returns:
             Aggify: An instance of the Aggify class representing a MongoDB lookup pipeline stage.
@@ -583,11 +586,11 @@ class Aggify:
         check_field_exists(self.base_model, as_name)  # noqa
         from_collection_name = from_collection._meta.get("collection")  # noqa
 
-        if not let and not (local_field and foreign_field):
+        if not (let or raw_let) and not (local_field and foreign_field):
             raise InvalidArgument(
-                expected_list=[["local_field", "foreign_field"], "let"]
+                expected_list=[["local_field", "foreign_field"], ["let", "raw_let"]]
             )
-        elif not let:
+        elif not (let or raw_let):
             lookup_stage = {
                 "$lookup": {
                     "from": from_collection_name,
@@ -602,10 +605,15 @@ class Aggify:
             if not query:
                 raise InvalidArgument(expected_list=["query"])
 
+            if let is None:
+                let = []
+
             let_dict = {
                 field: f"${get_db_field(self.base_model, self.get_field_name_recursively(field))}"  # noqa
                 for field in let
             }
+
+            let = list(raw_let.keys()) if let is [] else let
 
             for q in query:
                 # Construct the match stage for each query
@@ -625,6 +633,8 @@ class Aggify:
                     )
 
             # Append the lookup stage with multiple match stages to the pipeline
+            if raw_let:
+                let_dict.update(raw_let)
             lookup_stage = {
                 "$lookup": {
                     "from": from_collection_name,
@@ -675,13 +685,17 @@ class Aggify:
             InvalidEmbeddedField: If the specified embedded field is not found or is not of the correct type.
         """
         model_field = self.get_model_field(self.base_model, embedded_field)  # noqa
-
+        field_name = get_db_field(self.base_model, embedded_field)
+        if "__module__" in model_field.__dict__:
+            self.base_model._fields = (
+                model_field._fields
+            )  # load new fields into old model
+            return f"${field_name}"
         if not hasattr(model_field, "document_type") or not issubclass(
             model_field.document_type, EmbeddedDocument
         ):
             raise InvalidEmbeddedField(field=embedded_field)
-
-        return f"${model_field.db_field}"
+        return f"${field_name}"
 
     @last_out_stage_check
     def replace_root(
@@ -703,10 +717,13 @@ class Aggify:
         """
         name = self._replace_base(embedded_field)
 
-        if not merge:
-            new_root = {"$replaceRoot": {"$newRoot": name}}
-        else:
+        if merge:
             new_root = {"$replaceRoot": {"newRoot": {"$mergeObjects": [merge, name]}}}
+            self.base_model._fields.update(  # noqa
+                {key: mongoengine_fields.IntField() for key, value in merge.items()}
+            )
+        else:
+            new_root = {"$replaceRoot": {"$newRoot": name}}
         self.pipelines.append(new_root)
 
         return self
