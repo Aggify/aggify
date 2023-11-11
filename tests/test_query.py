@@ -274,7 +274,7 @@ cases = [
     ),
     ParameterTestCase(
         compiled_query=(Aggify(PostDocument).replace_root(embedded_field="stat")),
-        expected_query=[{"$replaceRoot": {"$newRoot": "$stat"}}],
+        expected_query=[{"$replaceRoot": {"newRoot": "$stat"}}],
     ),
     ParameterTestCase(
         compiled_query=(Aggify(PostDocument).replace_with(embedded_field="stat")),
@@ -525,8 +525,12 @@ cases = [
                     "localField": "end",
                 }
             },
-            {"$replaceRoot": {"$newRoot": "$saved_post"}},
+            {"$replaceRoot": {"newRoot": "$saved_post"}},
         ],
+    ),
+    ParameterTestCase(
+        compiled_query=(Aggify(PostDocument).filter(stat__like_count=2)),
+        expected_query=[{"$match": {"stat.like_count": 2}}],
     ),
 ]
 
