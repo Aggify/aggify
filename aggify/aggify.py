@@ -17,10 +17,10 @@ from aggify.exceptions import (
 from aggify.types import QueryParams, CollectionType
 from aggify.utilty import (
     to_mongo_positive_index,
-    check_fields_exist,
+    validate_field_existence,
     replace_values_recursive,
     convert_match_query,
-    check_field_exists,
+    check_field_already_exists,
     get_db_field,
 )
 
@@ -538,7 +538,7 @@ class Aggify:
         # Split the field based on double underscores and process each item
         for index, item in enumerate(field.split("__")):
             # Ensure the field exists at the current level of hierarchy
-            check_fields_exist(prev_base, [item])  # noqa
+            validate_field_existence(prev_base, [item])  # noqa
 
             # Append the database field name to the field_name list
             field_name.append(get_db_field(prev_base, item))
@@ -583,7 +583,7 @@ class Aggify:
         """
 
         lookup_stages = []
-        check_field_exists(self.base_model, as_name)  # noqa
+        check_field_already_exists(self.base_model, as_name)  # noqa
         from_collection_name = from_collection._meta.get("collection")  # noqa
 
         if not (let or raw_let) and not (local_field and foreign_field):

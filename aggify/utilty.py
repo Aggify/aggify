@@ -23,9 +23,9 @@ def to_mongo_positive_index(index: Union[int, slice]) -> slice:
     return index
 
 
-def check_fields_exist(model: CollectionType, fields_to_check: List[str]) -> None:
+def validate_field_existence(model: CollectionType, fields_to_check: List[str]) -> None:
     """
-    Check if the specified fields exist in a model's fields.
+    The function checks a list of fields and raises an InvalidField exception if any are missing.
 
     Args:
         model: The model containing the fields to check.
@@ -106,7 +106,7 @@ def convert_match_query(
         return d
 
 
-def check_field_exists(model: CollectionType, field: str) -> None:
+def check_field_already_exists(model: CollectionType, field: str) -> None:
     """
     Check if a field exists in the given model.
 
