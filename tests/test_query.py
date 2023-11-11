@@ -510,7 +510,7 @@ cases = [
             Aggify(PostDocument)
             .lookup(
                 PostDocument,
-                local_field="end",
+                local_field="stat",
                 foreign_field="id",
                 as_name="saved_post",
             )
@@ -522,7 +522,7 @@ cases = [
                     "as": "saved_post",
                     "foreignField": "_id",
                     "from": "post_document",
-                    "localField": "end",
+                    "localField": "stat",
                 }
             },
             {"$replaceRoot": {"newRoot": "$saved_post"}},

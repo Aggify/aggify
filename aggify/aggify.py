@@ -517,7 +517,9 @@ class Aggify:
         return merged_pipeline
 
     # check_fields_exist(self.base_model, let)  # noqa
-    def get_field_name_recursively(self, field: str) -> str:
+    def get_field_name_recursively(
+        self, field: str, base: Union[CollectionType, None] = None
+    ) -> str:
         """
         Recursively fetch the field name by following the hierarchy indicated by the field parameter.
 
@@ -533,19 +535,19 @@ class Aggify:
         """
 
         field_name = []
-        prev_base = self.base_model
+        base = self.base_model if not base else base
 
         # Split the field based on double underscores and process each item
         for index, item in enumerate(field.split("__")):
             # Ensure the field exists at the current level of hierarchy
-            validate_field_existence(prev_base, [item])  # noqa
+            validate_field_existence(base, [item])  # noqa
 
             # Append the database field name to the field_name list
-            field_name.append(get_db_field(prev_base, item))
+            field_name.append(get_db_field(base, item))
 
             # Move to the next level in the model hierarchy
-            prev_base = self.get_model_field(prev_base, item)
-            prev_base = prev_base.__dict__.get("document_type_obj", prev_base)
+            base = self.get_model_field(base, item)
+            base = base.__dict__.get("document_type_obj", base)
 
         # Join the entire hierarchy using dots and return
         return ".".join(field_name)
@@ -594,9 +596,9 @@ class Aggify:
             lookup_stage = {
                 "$lookup": {
                     "from": from_collection_name,
-                    "localField": get_db_field(self.base_model, local_field),  # noqa
-                    "foreignField": get_db_field(
-                        from_collection, foreign_field  # noqa
+                    "localField": self.get_field_name_recursively(local_field),  # noqa
+                    "foreignField": self.get_field_name_recursively(
+                        base=from_collection, field=foreign_field  # noqa
                     ),
                     "as": as_name,
                 }
