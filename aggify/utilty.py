@@ -1,8 +1,9 @@
 from typing import Any, Union, List, Dict
 
 from mongoengine import Document
-from aggify.types import CollectionType
+
 from aggify.exceptions import MongoIndexError, InvalidField, AlreadyExistsField
+from aggify.types import CollectionType
 
 
 def to_mongo_positive_index(index: Union[int, slice]) -> slice:
@@ -116,7 +117,10 @@ def check_field_exists(model: CollectionType, field: str) -> None:
     Raises:
         AlreadyExistsField: If the field already exists in the model.
     """
-    if model._fields.get(field):  # noqa
+    if field in [
+        f.db_field if hasattr(f, "db_field") else k
+        for k, f in model._fields.items()  # noqa
+    ]:
         raise AlreadyExistsField(field=field)
 
 
@@ -138,3 +142,29 @@ def get_db_field(model: CollectionType, field: str, add_dollar_sign=False) -> st
         return f"${db_field}" if add_dollar_sign else db_field
     except AttributeError:
         return field
+
+
+def get_nested_field_model(model: CollectionType, field: str) -> CollectionType:
+    """
+    Retrieves the nested field model for a specified field within a given model.
+
+    This function examines the provided model to determine if the specified field is
+    a nested field. If it is, the function returns the nested field's model.
+    Otherwise, it returns the original model.
+
+    Args:
+        model (CollectionType): The model to be inspected. This should be a class that
+                                represents a collection or document in a database, typically
+                                in an ORM or ODM framework.
+        field (str): The name of the field within the model to inspect for nestedness.
+
+    Returns:
+        CollectionType: The model of the nested field if the specified field is nested;
+                        otherwise, returns the original model.
+
+    Raises:
+        KeyError: If the specified field is not found in the model.
+    """
+    if model._fields[field].__dict__.get("__module__"):  # noqa
+        return model
+    return model._fields[field].__dict__["document_type_obj"]  # noqa
