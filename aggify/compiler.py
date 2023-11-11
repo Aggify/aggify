@@ -4,7 +4,7 @@ from mongoengine import Document, EmbeddedDocumentField
 from mongoengine.base import TopLevelDocumentMetaclass
 
 from aggify.exceptions import InvalidOperator
-from aggify.utilty import get_db_field
+from aggify.utilty import get_db_field, get_nested_field_model
 
 
 class Operators:
@@ -284,16 +284,20 @@ class Match:
                 match_query[key] = value
                 continue
 
-            field, operator, *_ = key.split("__")
+            field, operator, *others = key.split("__")
             if (
                 self.is_base_model_field(field)
                 and operator not in Operators.ALL_OPERATORS
             ):
-                pipelines.append(
-                    Match({key.replace("__", ".", 1): value}, self.base_model).compile(
-                        []
-                    )
+                field_db_name = get_db_field(self.base_model, field)
+
+                nested_field_name = get_db_field(
+                    get_nested_field_model(self.base_model, field), operator
                 )
+                key = (
+                    f"{field_db_name}.{nested_field_name}__" + "__".join(others)
+                ).rstrip("__")
+                pipelines.append(Match({key: value}, self.base_model).compile([]))
                 continue
 
             if operator not in Operators.ALL_OPERATORS:
