@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://i.imgur.com/LIcqDY1.png?3" alt="Aggify">
+  <img src="https://i.imgur.com/BBp9vUQ.png" alt="Aggify">
 </p>
 <p align="center">
     <em>Aggify is a Python library to generate MongoDB aggregation pipelines</em>
