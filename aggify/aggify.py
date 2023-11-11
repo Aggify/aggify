@@ -723,7 +723,7 @@ class Aggify:
                 {key: mongoengine_fields.IntField() for key, value in merge.items()}
             )
         else:
-            new_root = {"$replaceRoot": {"$newRoot": name}}
+            new_root = {"$replaceRoot": {"newRoot": name}}
         self.pipelines.append(new_root)
 
         return self
