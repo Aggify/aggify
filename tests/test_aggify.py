@@ -662,3 +662,7 @@ class TestAggify:
             "as": "test_name",
         }
         assert "test_name" in list(aggify.base_model._fields.keys())
+
+    def test_group_multi_expressions(self):
+        thing = list(Aggify(BaseModel).group(["name", "age"]))
+        assert thing[0]["$group"] == {"_id": {"name": "$name", "age": "$age"}}
