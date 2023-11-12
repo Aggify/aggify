@@ -117,8 +117,13 @@ class Aggify:
         return self
 
     @last_out_stage_check
-    def group(self, expression: Union[str, None] = "id") -> "Aggify":
-        if expression:
+    def group(self, expression: Union[str, Dict, List, None] = "id") -> "Aggify":
+        if isinstance(expression, list):
+            expression = {
+                field: f"${self.get_field_name_recursively(field)}"
+                for field in expression
+            }
+        if expression and not isinstance(expression, dict):
             try:
                 expression = "$" + self.get_field_name_recursively(expression)
             except InvalidField:
@@ -454,7 +459,9 @@ class Aggify:
 
         # Determine the data type based on the aggregation operator
         self.pipelines[-1]["$group"].update({annotate_name: {acc: value}})
-        self.base_model._fields[annotate_name] = field_type  # noqa
+        base_model_fields = self.base_model._fields  # noqa
+        if not base_model_fields.get(annotate_name, None):
+            base_model_fields[annotate_name] = field_type
         return self
 
     def __match(self, matches: Dict[str, Any]):
