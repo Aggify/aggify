@@ -22,6 +22,7 @@ from aggify.utilty import (
     convert_match_query,
     check_field_already_exists,
     get_db_field,
+    copy_class,
 )
 
 AggifyType = TypeVar("AggifyType", bound=Callable[..., "Aggify"])
@@ -56,9 +57,7 @@ class Aggify:
             base_model: The base model class.
         """
         # Create a separate copy of the main class for safety and flexibility
-        self.base_model = type(
-            "Aggify_base_model", base_model.__bases__, dict(base_model.__dict__)
-        )
+        self.base_model = copy_class(base_model)
         self.pipelines: List[Dict[str, Union[dict, Any]]] = []
         self.start = None
         self.stop = None
@@ -656,7 +655,7 @@ class Aggify:
         self.pipelines.append(lookup_stage)
 
         # Add this new field to base model fields, which we can use it in the next stages.
-        self.base_model._fields[as_name] = from_collection  # noqa
+        self.base_model._fields[as_name] = copy_class(from_collection)  # noqa
 
         return self
 

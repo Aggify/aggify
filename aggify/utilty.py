@@ -168,3 +168,22 @@ def get_nested_field_model(model: CollectionType, field: str) -> CollectionType:
     if model._fields[field].__dict__.get("__module__"):  # noqa
         return model
     return model._fields[field].__dict__["document_type_obj"]  # noqa
+
+
+def copy_class(original_class):
+    """
+    Copies a class, creating a new class with the same bases and attributes.
+
+    Parameters:
+    original_class (class): The class to be copied.
+
+    Returns:
+    class: A new class with the same bases and attributes as the original class.
+    """
+    # Create a new class with the same name, bases, and attributes
+    copied_class = type(
+        "Aggify" + original_class.__name__,
+        original_class.__bases__,
+        dict(original_class.__dict__),
+    )
+    return copied_class
