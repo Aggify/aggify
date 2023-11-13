@@ -15,7 +15,7 @@ def to_mongo_positive_index(index: Union[int, slice]) -> slice:
     if index.step is not None:
         raise MongoIndexError
 
-    if int(index.start) >= index.stop:
+    if int(index.start) > index.stop:
         raise MongoIndexError
 
     if int(index.start) < 0:
