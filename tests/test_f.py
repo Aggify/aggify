@@ -1,3 +1,5 @@
+import pytest
+
 from aggify import F  # Import from your actual module
 
 
@@ -72,3 +74,18 @@ class TestF:
         f3 = F("nano")
         f_combined = f1 * f2 * f3
         assert f_combined.to_dict() == {"$multiply": ["$quantity", "$price", "$nano"]}
+
+    @pytest.mark.parametrize(
+        "method",
+        (
+            "first",
+            "last",
+            "min",
+            "max",
+            "sum",
+            "avg",
+        ),
+    )
+    def test_f_operator_methods(self, method):
+        f1 = F("quantity")
+        assert getattr(f1, method)() == {f"${method}": "$quantity"}

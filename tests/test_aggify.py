@@ -13,6 +13,7 @@ from aggify.exceptions import (
     InvalidEmbeddedField,
     MongoIndexError,
     InvalidProjection,
+    InvalidAnnotateExpression,
 )
 
 
@@ -666,3 +667,17 @@ class TestAggify:
     def test_group_multi_expressions(self):
         thing = list(Aggify(BaseModel).group(["name", "age"]))
         assert thing[0]["$group"] == {"_id": {"name": "$name", "age": "$age"}}
+
+    def test_annotate_with_f_expressions(self):
+        thing = list(
+            Aggify(BaseModel).group(["name", "age"]).annotate(first=F("name").first())
+        )
+        assert thing[0]["$group"] == {
+            "_id": {"name": "$name", "age": "$age"},
+            "first": {"$first": "$name"},
+        }
+
+    def test_annotate_with_invalid_f_expression(self):
+        with pytest.raises(InvalidAnnotateExpression):
+            # noinspection PyUnusedLocal
+            thing = list(Aggify(BaseModel).group(["name", "age"]).annotate(first=""))
