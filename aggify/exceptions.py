@@ -80,3 +80,9 @@ class InvalidProjection(AggifyBaseException):
     def __init__(self):
         self.message = "You can't use inclusion and exclusion together."
         super().__init__(self.message)
+
+
+class InvalidAnnotateExpression(AggifyBaseException):
+    def __init__(self):
+        self.message = "Invalid expression passed to annotate."
+        super().__init__(self.message)
