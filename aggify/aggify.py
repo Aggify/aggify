@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, Type, Union, List, TypeVar, Callable
+from typing import Any, Dict, Type, Union, List, TypeVar, Callable, Tuple
 
 from mongoengine import Document, EmbeddedDocument, fields as mongoengine_fields
 from mongoengine.base import TopLevelDocumentMetaclass
@@ -13,6 +13,7 @@ from aggify.exceptions import (
     OutStageError,
     InvalidArgument,
     InvalidProjection,
+    InvalidAnnotateExpression,
 )
 from aggify.types import QueryParams, CollectionType
 from aggify.utilty import (
@@ -362,7 +363,11 @@ class Aggify:
         return self
 
     def annotate(
-        self, annotate_name: str, accumulator: str, f: Union[Union[str, Dict], F, int]
+        self,
+        annotate_name: Union[str, None] = None,
+        accumulator: Union[str, None] = None,
+        f: Union[Union[str, Dict], F, int, None] = None,
+        **kwargs,
     ) -> "Aggify":
         """
         Annotate a MongoDB aggregation pipeline with a new field.
@@ -372,6 +377,7 @@ class Aggify:
             annotate_name (str): The name of the new annotated field.
             accumulator (str): The aggregation accumulator operator (e.g., "$sum", "$avg").
             f (Union[str, Dict] | F | int): The value for the annotated field.
+            kwargs: Use F expressions.
 
         Returns:
             self.
@@ -381,11 +387,60 @@ class Aggify:
 
         Example:
             annotate("totalSales", "sum", "sales")
+            or
+            annotate(first_field = F('field').first())
+        """
+
+        try:
+            stage = list(self.pipelines[-1].keys())[0]
+            if stage != "$group":
+                raise AnnotationError(
+                    f"Annotations apply only to $group, not to {stage}"
+                )
+        except IndexError:
+            raise AnnotationError(
+                "Annotations apply only to $group, your pipeline is empty"
+            )
+
+        # Check either use F expression or not.
+        base_model_fields = self.base_model._fields  # noqa
+        if not kwargs:
+            field_type, acc = self._get_field_type_and_accumulator(accumulator)
+
+            # Get the annotation value: If the value is a string object, then it will be validated in the case of
+            # embedded fields; otherwise, if it is an F expression object, simply return it.
+            value = self._get_annotate_value(f)
+            annotate = {annotate_name: {acc: value}}
+            # Determine the data type based on the aggregation operator
+            if not base_model_fields.get(annotate_name, None):
+                base_model_fields[annotate_name] = field_type
+        else:
+            annotate, fields = self._do_annotate_with_expression(
+                kwargs, base_model_fields
+            )
+
+        self.pipelines[-1]["$group"].update(annotate)
+        return self
+
+    @staticmethod
+    def _get_field_type_and_accumulator(
+        accumulator: str,
+    ) -> Tuple[Type, str]:
+        """
+        Retrieves the accumulator name and returns corresponding MongoDB accumulator field type and name.
+
+        Args:
+            accumulator (str): The name of the accumulator.
+
+        Returns: (Tuple): containing the field type and MongoDB accumulator string.
+
+        Raises:
+            AnnotationError: If the accumulator name is invalid.
         """
 
         # Some of the accumulator fields might be false and should be checked.
         # noinspection SpellCheckingInspection
-        aggregation_mapping: Dict[str, Type] = {
+        aggregation_mapping: Dict[str, Tuple] = {
             "sum": (mongoengine_fields.FloatField(), "$sum"),
             "avg": (mongoengine_fields.FloatField(), "$avg"),
             "stdDevPop": (mongoengine_fields.FloatField(), "$stdDevPop"),
@@ -428,23 +483,26 @@ class Aggify:
             "lastN": (mongoengine_fields.ListField(), "$lastN"),
             "maxN": (mongoengine_fields.ListField(), "$maxN"),
         }
-
         try:
-            stage = list(self.pipelines[-1].keys())[0]
-            if stage != "$group":
-                raise AnnotationError(
-                    f"Annotations apply only to $group, not to {stage}"
-                )
-        except IndexError:
-            raise AnnotationError(
-                "Annotations apply only to $group, your pipeline is empty"
-            )
-
-        try:
-            field_type, acc = aggregation_mapping[accumulator]
+            return aggregation_mapping[accumulator]
         except KeyError as error:
             raise AnnotationError(f"Invalid accumulator: {accumulator}") from error
 
+    def _get_annotate_value(self, f: Union[F, str]) -> Union[Dict, str]:
+        """
+        Determines the annotation value based on the type of the input 'f'.
+
+        If 'f' is an instance of F, it converts it to a dictionary.
+        If 'f' is a string, it attempts to retrieve the corresponding field name recursively.
+        If it encounters an InvalidField exception, it retains 'f' as the value.
+        Otherwise, 'f' is returned as is.
+
+        Args:
+            f: The input value, which can be an instance of F, a string, or any other type.
+
+        Returns:
+            The determined annotation value, which could be a dictionary, a formatted string, or the original input.
+        """
         if isinstance(f, F):
             value = f.to_dict()
         else:
@@ -455,13 +513,41 @@ class Aggify:
                     value = f
             else:
                 value = f
+        return value
 
-        # Determine the data type based on the aggregation operator
-        self.pipelines[-1]["$group"].update({annotate_name: {acc: value}})
-        base_model_fields = self.base_model._fields  # noqa
-        if not base_model_fields.get(annotate_name, None):
-            base_model_fields[annotate_name] = field_type
-        return self
+    @staticmethod
+    def _do_annotate_with_expression(
+        annotate: Dict[str, Dict[str, Any]], base_model_fields: Dict[str, Any]
+    ) -> Tuple[Dict[str, Dict[str, Any]], List[str]]:
+        """
+        Processes the annotation with an expression, updating the fields and annotation dictionary.
+
+        Args:
+            annotate (Dict[str, Dict[str, Any]]): A dictionary containing field names and their corresponding F expressions.
+            base_model_fields (Dict[str, Any]): A dictionary representing the base model fields.
+
+        Returns: Tuple[Dict[str, Dict[str, Any]], List[str]]: A tuple containing the updated annotations and a list
+        of field names.
+
+        Raises:
+            InvalidAnnotateExpression: If the F expression is not a dictionary.
+        """
+        # Check if all elements in kwargs were valid
+        for item in annotate.values():
+            if not isinstance(item, dict):
+                raise InvalidAnnotateExpression()
+
+        # Extract field names
+        fields = list(annotate.keys())
+
+        # Process base_model_fields
+        for field_name in fields:
+            if field_name not in base_model_fields:
+                accumulator = next(iter(annotate[field_name])).replace("$", "")
+                field_type, _ = Aggify._get_field_type_and_accumulator(accumulator)
+                base_model_fields[field_name] = field_type
+
+        return annotate, fields
 
     def __match(self, matches: Dict[str, Any]):
         """
