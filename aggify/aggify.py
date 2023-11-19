@@ -425,7 +425,7 @@ class Aggify:
     @staticmethod
     def _get_field_type_and_accumulator(
         accumulator: str,
-    ) -> Tuple[mongoengine_fields, str]:
+    ) -> Tuple[Type, str]:
         """
         Retrieves the accumulator name and returns corresponding MongoDB accumulator field type and name.
 
