@@ -184,6 +184,24 @@ class F:
             return False
         return True
 
+    def first(self):
+        return {"$first": self.field}
+
+    def last(self):
+        return {"$last": self.field}
+
+    def min(self):
+        return {"$min": self.field}
+
+    def max(self):
+        return {"$max": self.field}
+
+    def sum(self):
+        return {"$sum": self.field}
+
+    def avg(self):
+        return {"$avg": self.field}
+
 
 class Cond:
     """
