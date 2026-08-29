@@ -9,6 +9,7 @@ Thank you for your interest in contributing to the Aggify project! We welcome co
 git clone https://github.com/Aggify/aggify.git
 ```
 
+
 3 - **Create a New Branch:** Create a new branch to work on your feature or bug fix:
 ```shell
 git checkout -b feature-or-bugfix-name
