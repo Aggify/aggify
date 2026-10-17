@@ -305,3 +305,6 @@ pyrightconfig.json
 .ionide
 test.py
 models.py
+# local virtualenvs / tooling
+.venv*/
+.hypothesis/

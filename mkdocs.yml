@@ -1,0 +1,54 @@
+site_name: Aggify
+site_description: Async-first MongoDB ODM with a Django-style API
+repo_url: https://github.com/Aggify/aggify
+edit_uri: edit/main/docs/
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      toggle: { icon: material/weather-sunny, name: Light mode }
+  features: [content.code.copy, navigation.sections, navigation.top, search.suggest, content.tabs.link]
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed: { alternate_style: true }
+  - pymdownx.snippets: { base_path: ["docs/examples"], check_paths: true }
+  - tables
+  - toc: { permalink: true }
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options: { show_source: false, members_order: source }
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Guide:
+      - Models & fields: models.md
+      - Querying: querying.md
+      - Expressions & functions: expressions.md
+      - Aggregation pipelines: aggregation.md
+      - Cookbook (complex queries, short): cookbook.md
+      - Sync & async: async.md
+      - Transactions: transactions.md
+      - Security: security.md
+      - Testing: testing.md
+      - Performance: performance.md
+  - Integrations:
+      - Django: integrations/django.md
+      - FastAPI: integrations/fastapi.md
+      - gRPC: integrations/grpc.md
+      - Pydantic: integrations/pydantic.md
+  - Migration:
+      - From MongoEngine: migration/mongoengine.md
+      - From Aggify 0.x: migration/aggify-0.md
+  - API reference: reference.md
+  - فارسی: fa.md

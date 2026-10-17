@@ -32,6 +32,18 @@ git push origin feature-or-bugfix-name
 
 10 - **Merge:** Once your pull request is approved, it will be merged into the main repository.
 
+## Development setup
+```shell
+make install     # editable install + test/doc dependencies
+make mongo       # single-node replica set in Docker on :27018 (transactions need a replica set)
+make test        # pytest (unit + integration + framework tests)
+make lint typecheck docs
+```
+Tests marked `mongo` skip themselves when no server is reachable; set `AGGIFY_TEST_MONGO_URI` to use your own.
+A new lookup, field or stage needs: a unit test of the compiled output, an integration test against MongoDB and
+(if user-facing) a docs entry. Anything touching query construction must keep `tests/integration/test_differential.py`
+and `tests/test_security.py` green.
+
 ## Guidelines
 * Follow Python PEP 8 style guidelines for code formatting.
 * Write clear and concise code comments and docstrings.
