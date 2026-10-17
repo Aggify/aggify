@@ -49,6 +49,7 @@ packages = ["aggify"]
 include = ["aggify", "tests", "docs", "README.md", "LICENSE", "SECURITY.md", "mkdocs.yml"]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
