@@ -108,7 +108,7 @@ def build_update(model: Any, changes: Dict[str, Any]) -> Union[Dict[str, Any], L
             bucket[db_path] = value
         elif op == "rename":
             bucket[db_path] = validate_field_name(str(value), allow_dots=True)
-        elif op == "current_date":
+        else:  # current_date
             bucket[db_path] = True
     return ops
 
@@ -148,9 +148,7 @@ def _build_pipeline_update(
             set_[db_path] = {fn: [arr, [{"$literal": item}]]}
         else:
             raise InvalidArgument(f"{op}__ cannot be combined with expression assignments.")
-    stages: List[Dict[str, Any]] = []
-    if set_:
-        stages.append({"$set": set_})
+    stages: List[Dict[str, Any]] = [{"$set": set_}]  # an expression assignment is always present here
     if unset:
         stages.append({"$unset": unset})
     return stages

@@ -251,7 +251,7 @@ class TestProjection:
         assert list(Account.objects.order_by("username").values_list("username", "age"))[1] == ("bob", 25)
         row = list(Account.objects.order_by("username").values_list("username", "age", named=True))[0]
         assert (row.username, row.age) == ("alice", 30)
-        assert "id" in Account.objects.values("id", "username").first() if False else True
+        assert "id" in Account.objects.values("id", "username").first()
 
     def test_values_over_joins_and_embedded(self, data):
         rows = list(Post.objects.order_by("caption").values("caption", "owner__username"))

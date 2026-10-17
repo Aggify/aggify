@@ -5,8 +5,22 @@ from __future__ import annotations
 import enum
 
 from aggify import (
-    BooleanField, DateTimeField, DecimalField, DictField, Document, EmailField, EmbeddedDocument, EmbeddedField,
-    EnumField, FloatField, GeoPointField, Index, IntField, ListField, ReferenceField, StringField,
+    BooleanField,
+    DateTimeField,
+    DecimalField,
+    DictField,
+    Document,
+    EmailField,
+    EmbeddedDocument,
+    EmbeddedField,
+    EnumField,
+    FloatField,
+    GeoPointField,
+    Index,
+    IntField,
+    ListField,
+    ReferenceField,
+    StringField,
 )
 
 

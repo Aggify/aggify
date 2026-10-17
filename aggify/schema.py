@@ -17,7 +17,7 @@ from dataclasses import field as dc_field
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from aggify.conf import settings
-from aggify.exceptions import InvalidField, InvalidLookup, UnsafeQueryError
+from aggify.exceptions import InvalidField, UnsafeQueryError
 from aggify.fields import AnyField, DictField, EmbeddedField, Field, ListField, ReferenceField
 from aggify.lookups import LOOKUPS
 
@@ -234,9 +234,6 @@ def resolve_path(
         else:
             cur = None
         i += 1
-
-    if lookup is not None and lookup not in LOOKUPS:
-        raise InvalidLookup(lookup, path)
 
     return Resolved(
         db_path=".".join(db_parts),

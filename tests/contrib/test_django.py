@@ -2,32 +2,14 @@
 
 import io
 
-import django
 import pytest
-from django.conf import settings
+from django.core.management import call_command
+from django.core.paginator import Paginator
+from django.db import connection, models
+from django.http import Http404
+from django.test import AsyncClient, Client, RequestFactory
 
-from tests.conftest import MONGO_URI
-
-if not settings.configured:
-    settings.configure(
-        SECRET_KEY="test",
-        USE_TZ=True,
-        DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},
-        INSTALLED_APPS=["django.contrib.contenttypes", "aggify.contrib.django"],
-        ROOT_URLCONF="tests.contrib.django_urls",
-        ALLOWED_HOSTS=["*"],
-        AGGIFY={"django-test": {"URI": MONGO_URI, "NAME": "aggify_django_tests", "OPTIONS": {"maxPoolSize": 7}}},
-        DEFAULT_AUTO_FIELD="django.db.models.AutoField",
-    )
-    django.setup()
-
-from django.core.management import call_command  # noqa: E402
-from django.core.paginator import Paginator  # noqa: E402
-from django.db import connection, models  # noqa: E402
-from django.http import Http404  # noqa: E402
-from django.test import AsyncClient, Client, RequestFactory  # noqa: E402
-
-import aggify  # noqa: E402
+import aggify
 from aggify.contrib.django.fields import ObjectIdField  # noqa: E402
 from aggify.contrib.django.forms import document_form  # noqa: E402
 from aggify.contrib.django.shortcuts import aget_object_or_404, get_list_or_404, get_object_or_404  # noqa: E402
@@ -118,7 +100,7 @@ def test_management_command(clean_db):
     assert {"username", "age"} <= names
 
 
-@pytest.mark.django_db if False else pytest.mark.mongo
+@pytest.mark.mongo
 def test_objectid_field_in_django_orm_model(clean_db):
     class Invoice(models.Model):
         customer = ObjectIdField(db_index=True)

@@ -645,8 +645,7 @@ class Pipeline:
             f = r.field
             if isinstance(f, ListField):
                 f = f.field
-            if isinstance(f, EmbeddedField):
-                scope = Scope.for_model(f.document_type)
+            scope = Scope.for_model(f.document_type)  # _replace() has verified it is embedded
             return "$" + r.db_path, scope, ctx
         return wrap(expr).resolve(ctx), scope, ctx
 
@@ -809,11 +808,15 @@ class Pipeline:
         new._options.update(opts)
         return new
 
-    def _aggregate_kwargs(self) -> Dict[str, Any]:
+    #: option names -> the spelling of the ``aggregate`` command (pymongo forwards unknown kwargs verbatim)
+    _COMMAND_OPTIONS = {"allow_disk_use": "allowDiskUse", "max_time_ms": "maxTimeMS", "batch_size": "batchSize"}
+
+    def _aggregate_kwargs(self, **extra: Any) -> Dict[str, Any]:
         kw = dict(self._options)
         if "max_time_ms" not in kw and settings.default_max_time_ms:
             kw["max_time_ms"] = settings.default_max_time_ms
-        return kw
+        kw.update(extra)
+        return {self._COMMAND_OPTIONS.get(k, k): v for k, v in kw.items()}
 
     def _alias(self) -> str:
         return self.model._meta.db_alias if self.model is not None else connection.DEFAULT_ALIAS

@@ -158,8 +158,6 @@ class ModelBase(type):
                     inherited.append((fname, fld.clone()))
         own = sorted(declared, key=lambda kv: kv[1]._creation_order)
         for fname, fld in [*inherited, *own]:
-            if fname in opts.fields and fname not in dict(own):
-                continue
             fld.contribute_to_class(cls, fname)
             opts.fields[fname] = fld
 
@@ -692,7 +690,9 @@ class Document(BaseDocument):
             field = self._meta.get_field(n)
             current = self._data.get(n)
             if current is not None and not hasattr(current, "_meta"):
-                self._data[n] = field.document_type.objects.filter(pk=current).first()
+                target = field.document_type.objects.filter(pk=current).first()
+                if target is not None:  # a dangling reference keeps its id
+                    self._data[n] = target
         return self
 
     async def afetch_related(self, *names: str) -> Document:
@@ -700,7 +700,9 @@ class Document(BaseDocument):
             field = self._meta.get_field(n)
             current = self._data.get(n)
             if current is not None and not hasattr(current, "_meta"):
-                self._data[n] = await field.document_type.objects.filter(pk=current).afirst()
+                target = await field.document_type.objects.filter(pk=current).afirst()
+                if target is not None:
+                    self._data[n] = target
         return self
 
     # ------------------------------------------------------------------ #

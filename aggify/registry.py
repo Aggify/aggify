@@ -9,12 +9,8 @@ from aggify.exceptions import ConfigurationError
 _models: Dict[str, List[type]] = {}
 
 
-def register(model: type) -> None:
-    keys = {model.__name__}
-    label = getattr(getattr(model, "_meta", None), "label", None)
-    if label:
-        keys.add(label)
-    for key in keys:
+def register(model: Any) -> None:
+    for key in {model.__name__, model._meta.label}:
         bucket = _models.setdefault(key, [])
         # re-definition of the same class name (autoreload, tests) replaces the old entry
         bucket[:] = [
@@ -45,10 +41,6 @@ def resolve(ref: Union[str, type], *, relative_to: Any = None) -> type:
             f"Model name {ref!r} is ambiguous ({[m.__module__ for m in candidates]}); use 'app_label.ModelName'."
         )
     return candidates[0]
-
-
-def clear() -> None:  # used by tests
-    _models.clear()
 
 
 Model = Type[Any]
