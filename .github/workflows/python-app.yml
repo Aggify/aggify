@@ -32,18 +32,22 @@ jobs:
           - { python-version: "3.11", mongo: "6.0" }
           - { python-version: "3.9", mongo: "8.0" }
           - { python-version: "3.10", mongo: "8.0" }
-    services:
-      mongo:
-        image: mongo:${{ matrix.mongo }}
-        ports: ["27017:27017"]
-        options: >-
-          --health-cmd "mongosh --quiet --eval 'try { rs.status().ok } catch (e) { rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]}).ok }'"
-          --health-interval 5s --health-timeout 10s --health-retries 12
-        env: {}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "${{ matrix.python-version }}", cache: pip }
+      - name: Start MongoDB ${{ matrix.mongo }} (single-node replica set)
+        run: |
+          docker run -d --name mongo -p 27017:27017 mongo:${{ matrix.mongo }} --replSet rs0 --bind_ip_all
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval 'db.runCommand({ping:1}).ok' >/dev/null 2>&1 && break
+            sleep 2
+          done
+          docker exec mongo mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true && break
+            sleep 2
+          done
       - name: Install
         run: pip install -e . pytest pytest-asyncio pytest-cov hypothesis httpx "pydantic>=2" fastapi grpcio protobuf "django>=4.2"
       - name: Test
