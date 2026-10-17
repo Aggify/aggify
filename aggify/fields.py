@@ -43,7 +43,7 @@ from bson import Binary, Decimal128, ObjectId
 from aggify import registry
 from aggify.conf import settings
 from aggify.exceptions import ValidationError
-from aggify.lookups import LOOKUPS, get_lookup, prepare_kind
+from aggify.lookups import get_lookup, prepare_kind
 from aggify.security import Raw, assert_safe_value, validate_dict_key
 
 T = TypeVar("T")
@@ -119,9 +119,10 @@ class Field(Generic[T]):
         setattr(model, name, self)
 
     @overload
-    def __get__(self, instance: None, owner: Any) -> Field[T]: ...
+    def __get__(self, instance: None, owner: Any) -> Field[T]: ...  # pragma: no cover
+
     @overload
-    def __get__(self, instance: Any, owner: Any) -> T: ...
+    def __get__(self, instance: Any, owner: Any) -> T: ...  # pragma: no cover
 
     def __get__(self, instance: Any, owner: Any = None) -> Any:
         if instance is None:
@@ -410,8 +411,6 @@ class IntField(Field[int]):
                 return int(value.strip())
             except ValueError:
                 return value
-        if isinstance(value, bson.Int64):
-            return int(value)
         return value
 
     def to_mongo(self, value: Any) -> Any:
@@ -788,9 +787,7 @@ class ListField(Field[List[Any]]):
     def lookup_field(self, lookup: str, value: Any) -> Field:
         if lookup in ("exact", "ne") and isinstance(value, (list, tuple)):
             return self  # whole array comparison
-        if lookup in ("in", "nin", "all") or lookup in LOOKUPS:
-            return self.field
-        return self
+        return self.field
 
     def _prepare_exact(self, value: Any) -> Any:
         if isinstance(value, (list, tuple)):

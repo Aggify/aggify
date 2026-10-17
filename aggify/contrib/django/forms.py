@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Any, Dict, Iterable, Optional, Type
 
 from django import forms
 
 from aggify import fields as f
 from aggify.exceptions import ValidationError as AggifyValidationError
+
+_URL_HAS_ASSUME_SCHEME = "assume_scheme" in inspect.signature(forms.URLField.__init__).parameters
 
 
 def _form_field(field: f.Field) -> Optional[forms.Field]:
@@ -20,6 +23,8 @@ def _form_field(field: f.Field) -> Optional[forms.Field]:
     if isinstance(field, f.EmailField):
         return forms.EmailField(max_length=field.max_length, **kw)
     if isinstance(field, f.URLField):
+        if _URL_HAS_ASSUME_SCHEME:  # pragma: no branch -- depends on the installed Django; Django >= 5.0: silence the "default scheme will change" deprecation
+            kw["assume_scheme"] = "https"
         return forms.URLField(max_length=field.max_length, **kw)
     if isinstance(field, f.StringField):
         return forms.CharField(min_length=field.min_length, max_length=field.max_length, strip=field.strip, **kw)

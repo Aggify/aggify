@@ -32,5 +32,10 @@ Aggify is now a standalone, async-first MongoDB ODM with a Django-style API. **M
 - `$subtract` / `$divide` with 3 operands, mutation of shared `F` / `Q` objects, `$unwind` using the wrong path,
   silently dropped `$match` conditions, magic `let` substitution, `[n]` meaning `limit n`.
 
+### Fixed before release
+- Pipeline/queryset aggregate options (`default_max_time_ms`, `options(max_time_ms=..., allow_disk_use=...)`) were sent with the wrong
+  option names and rejected by the server; they are now translated to `maxTimeMS` / `allowDiskUse` / `batchSize`.
+- A queryset annotation missing from a result row is `None` instead of an unset attribute; dangling references keep their id on `fetch_related`.
+
 ### Breaking
 See the [upgrade guide](docs/migration/aggify-0.md).

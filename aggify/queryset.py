@@ -492,15 +492,14 @@ class QuerySet(Generic[M]):
         obj = self.model.from_mongo(row, loaded=loaded)
         scope_ = scope
         for name in self._annotations:
-            if name in row:
-                f = scope_.fields.get(name) if scope_ is not None else None
-                value = row[name]
-                if f is not None and value is not None:
-                    try:
-                        value = f.from_mongo(value)
-                    except Exception:  # noqa: S110 - keep the raw value if it cannot be converted
-                        pass
-                setattr(obj, name, value)
+            f = scope_.fields.get(name) if scope_ is not None else None
+            value = row.get(name)  # a missing key means "no value": None, like Django
+            if f is not None and value is not None:
+                try:
+                    value = f.from_mongo(value)
+                except Exception:  # noqa: S110 - keep the raw value if it cannot be converted
+                    pass
+            setattr(obj, name, value)
         for name in self._select_related:
             _attach_related(obj, self.model, name, row)
         return obj
@@ -593,9 +592,8 @@ class QuerySet(Generic[M]):
         else:
             cursor = coll.aggregate(
                 plan._final_stages(),
-                batchSize=chunk_size,
                 **connection.session_kwargs(self.model._meta.db_alias),
-                **plan._aggregate_kwargs(),
+                **plan._aggregate_kwargs(batch_size=chunk_size),
             )
         try:
             for r in cursor:
@@ -764,8 +762,7 @@ class QuerySet(Generic[M]):
         kw = connection.session_kwargs(self.model._meta.db_alias)
         try:
             for docs in batches:
-                if docs:
-                    coll.insert_many(docs, ordered=ordered, **kw)
+                coll.insert_many(docs, ordered=ordered, **kw)
         except BulkWriteError as exc:
             raise NotUniqueError(str(exc.details.get("writeErrors", [{}])[0].get("errmsg", exc))) from exc
         self._finish_bulk(objs)
@@ -867,9 +864,8 @@ class QuerySet(Generic[M]):
         else:
             cursor = await coll.aggregate(
                 plan._final_stages(),
-                batchSize=chunk_size,
                 **connection.session_kwargs(self.model._meta.db_alias),
-                **plan._aggregate_kwargs(),
+                **plan._aggregate_kwargs(batch_size=chunk_size),
             )
         try:
             async for r in cursor:
@@ -983,8 +979,7 @@ class QuerySet(Generic[M]):
         kw = connection.session_kwargs(self.model._meta.db_alias)
         try:
             for docs in batches:
-                if docs:
-                    await coll.insert_many(docs, ordered=ordered, **kw)
+                await coll.insert_many(docs, ordered=ordered, **kw)
         except BulkWriteError as exc:
             raise NotUniqueError(str(exc.details.get("writeErrors", [{}])[0].get("errmsg", exc))) from exc
         self._finish_bulk(objs)
@@ -1040,9 +1035,7 @@ def _invert(o: Any) -> Any:
         return o[1:] if o.startswith("-") else "-" + o.lstrip("+")
     if isinstance(o, OrderBy):
         return OrderBy(o.expression, not o.descending)
-    if isinstance(o, F):
-        return OrderBy(o, True)
-    return o
+    return OrderBy(o, True)
 
 
 def _getattr_field(obj: Any, name: str) -> Any:

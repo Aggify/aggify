@@ -194,6 +194,4 @@ class TestPathResolution:
 
     def test_dollar_key_in_dict_path_is_refused(self):
         with pytest.raises(UnsafeQueryError):
-            q(Account, **{"attrs____set": 1}) if False else (_ for _ in ()).throw(UnsafeQueryError())
-        with pytest.raises(Exception):
             q(Account, **{"attrs__$ne": 1})

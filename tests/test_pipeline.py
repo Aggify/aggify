@@ -395,6 +395,6 @@ class TestRawAndSecurity:
 
     def test_options(self):
         p = P().options(allow_disk_use=True, max_time_ms=1000)
-        assert p._aggregate_kwargs() == {"allow_disk_use": True, "max_time_ms": 1000}
+        assert p._aggregate_kwargs() == {"allowDiskUse": True, "maxTimeMS": 1000}
         with pytest.raises(InvalidArgument):
             P().options(bogus=1)
