@@ -308,3 +308,7 @@ models.py
 # local virtualenvs / tooling
 .venv*/
 .hypothesis/
+
+# test models are source code
+!tests/models.py
+!docs/examples/shop_models.py
