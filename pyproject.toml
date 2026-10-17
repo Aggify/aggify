@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aggify"
-version = "1.0.0.dev0"
+version = "1.0.0"
 description = "Async-first MongoDB ODM with a Django-style API: QuerySets, aggregation pipelines, FastAPI/gRPC/Django integrations."
 readme = "README.md"
 license = { file = "LICENSE" }

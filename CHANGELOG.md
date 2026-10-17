@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 (unreleased) - complete rewrite
+## 1.0.0 - 2026-10-17 - complete rewrite
 
 Aggify is now a standalone, async-first MongoDB ODM with a Django-style API. **MongoEngine is no longer used or required.**
 
