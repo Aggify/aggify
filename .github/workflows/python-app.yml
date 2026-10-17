@@ -1,53 +1,70 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
-name: Python application
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -e . ruff mypy "pydantic>=2" fastapi "django>=4.2" grpcio
+      - run: ruff check aggify tests
+      - run: mypy aggify
+
   test:
     runs-on: ubuntu-latest
-
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        mongo: ["6.0", "7.0", "8.0"]
+        exclude:
+          - { python-version: "3.10", mongo: "6.0" }
+          - { python-version: "3.11", mongo: "6.0" }
+          - { python-version: "3.9", mongo: "8.0" }
+          - { python-version: "3.10", mongo: "8.0" }
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-
-      - name: Install dependencies
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python-version }}", cache: pip }
+      - name: Start MongoDB ${{ matrix.mongo }} (single-node replica set)
         run: |
-          python -m pip install --upgrade pip
-          pip install flake8 pytest pytest-cov
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Lint with flake8
-        run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - name: Test with pytest
-        run: |
-          pytest --cov=./ --cov-report=xml
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+          docker run -d --name mongo -p 27017:27017 mongo:${{ matrix.mongo }} --replSet rs0 --bind_ip_all
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval 'db.runCommand({ping:1}).ok' >/dev/null 2>&1 && break
+            sleep 2
+          done
+          docker exec mongo mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+          for i in $(seq 1 30); do
+            docker exec mongo mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true && break
+            sleep 2
+          done
+      - name: Install
+        run: pip install -e . pytest pytest-asyncio pytest-cov hypothesis httpx "pydantic>=2" fastapi grpcio protobuf "django>=4.2"
+      - name: Test
+        env:
+          AGGIFY_TEST_MONGO_URI: mongodb://localhost:27017/?directConnection=true
+        run: pytest --cov=aggify --cov-report=xml
+      - uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.12' && matrix.mongo == '7.0'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
+          files: coverage.xml
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -e . mkdocs mkdocs-material "mkdocstrings[python]"
+      - run: mkdocs build --strict

@@ -20,7 +20,8 @@ Aggify's security policy applies to the most recent stable release and the previ
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| 1.0.x   | :white_check_mark: |
+| 0.x     | :x: (superseded by the 1.0 rewrite - please upgrade) |
 
 ## Security Updates
 
@@ -37,3 +38,11 @@ We are committed to addressing security issues promptly. In the event of a confi
 If you have any questions or concerns regarding the security of Aggify, please contact us at [support@aggify.org](mailto:support@aggify.org). Our team will be happy to assist you.
 
 Thank you for helping us make Aggify more secure.
+
+
+## Threat model and built-in protections
+
+Aggify's protections (operator-injection prevention, regex escaping, JavaScript blocking, validated field names, resource
+limits, credential masking) and what remains the application's responsibility are documented in
+[docs/security.md](docs/security.md). Reports that bypass any of them - for example a value that reaches a query with
+a `$` operator without going through `Raw()` - are treated as vulnerabilities.
